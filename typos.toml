@@ -1,0 +1,5 @@
+# Typos (Rust): README, Markdown, Python source and docstrings, TOML, etc.
+# https://github.com/crate-ci/typos/blob/master/docs/reference.md
+
+[files]
+extend-exclude = ["*.egg-info/", ".git/", ".venv/", "build/", "dist/"]

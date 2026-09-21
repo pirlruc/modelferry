@@ -1,0 +1,35 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/python
+{
+    "name": "modelferry",
+    "image": "mcr.microsoft.com/devcontainers/python:3.13",
+    // Features to add to the dev container. More info: https://containers.dev/features.
+    "features": {
+        "ghcr.io/devcontainers/features/git:1": {},
+        "ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
+            "packages": "nano"
+        }
+    },
+    // Use 'postCreateCommand' to run commands after the container is created.
+    "postCreateCommand": {
+        "bootstrap": "pip install uv && uv sync --frozen --extra dev && uv run pre-commit install"
+    },
+    // Configure tool-specific properties.
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "ms-python.mypy-type-checker",
+                "charliermarsh.ruff",
+                "tamasfe.even-better-toml",
+                "njpwerner.autodocstring",
+                "mhutchie.git-graph",
+                "donjayamanne.githistory",
+                "gruntfuggly.todo-tree",
+                "GitHub.copilot",
+                "EditorConfig.EditorConfig"
+            ]
+        }
+    }
+}

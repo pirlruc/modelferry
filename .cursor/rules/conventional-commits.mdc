@@ -1,0 +1,41 @@
+---
+description: Use Conventional Commits when creating git commit messages
+alwaysApply: true
+---
+
+# Conventional Commits
+
+When creating a commit, use [Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+<type>(<scope>): <subject>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+## Format rules
+
+- **Subject:** imperative mood, lowercase, no trailing period, ~72 chars max
+- **Scope:** optional but recommended — module or area (for example `gitlab`, `cache`, `ci`)
+- **Body:** explain why, not what; wrap at ~100 chars
+- **Breaking changes:** `feat!:` or footer `BREAKING CHANGE: <description>`
+
+## Allowed types
+
+| Type | Use for |
+|------|---------|
+| `feat` | New capability or user-visible behavior |
+| `fix` | Bug fix |
+| `docs` | Documentation only |
+| `chore` | Maintenance, tooling, deps |
+| `refactor` | Code change without fixing a bug or adding a feature |
+| `test` | Tests only |
+| `ci` | CI/CD workflow or pipeline changes |
+| `build` | Build system or packaging |
+
+## Related
+
+- Issue methodology: [github-issue-adr](https://github.com/pirlruc/methodologies/tree/main/github-issue-adr)
+- Handoff hygiene: [agent-handoff-log.mdc](agent-handoff-log.mdc)

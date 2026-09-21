@@ -1,0 +1,175 @@
+---
+# Generated as the source of truth for epics and tasks.
+# Epic issues are the decision records. Do not add docs/adr markdown.
+# Methodology: https://github.com/pirlruc/methodologies/tree/main/github-issue-adr
+repo: pirlruc/modelferry
+milestones:
+  - name: Phase 1 — GitLab fetcher
+    status: open
+    epics:
+      - id: PKG-001
+        status: open
+        title: Python scaffold and uv packaging
+        decision: >-
+          In the context of publishing model-fetcher from pirlruc/modelferry, facing
+          a request
+          to use hatchling plus a private GitHub scaffold that was not readable, we
+          decided to
+          adopt the public pymjolnir scaffold (setuptools, uv lockfile, ruff, mypy,
+          pylint,
+          pytest, bandit, gitleaks) on Python 3.13, to achieve the same release path
+          as the
+          other Python library, accepting that hatchling is not the build backend.
+        overview:
+          problem: The repository was an empty README and needed a package layout.
+          goal: Ship an installable model-fetcher distribution built with uv.
+        architecture:
+          target: pyproject.toml, src/model_fetcher, .github/workflows
+          modules: [model_fetcher]
+        acceptance_criteria:
+          - uv sync --frozen --extra dev installs the project.
+          - uv build produces an sdist and a wheel.
+          - CI runs ruff, mypy, pylint, pytest, bandit, gitleaks, uv audit, and uv
+            build.
+        tasks:
+          - id: PKG-001-T1
+            status: open
+            title: Add the src layout, lockfile, and CI workflows
+            instructions:
+              files: [pyproject.toml, .github/workflows/ci.yml]
+            verification: [uv lock --check, uv build]
+      - id: ARCH-001
+        status: open
+        title: Provider facade for registry download and flag resolution
+        decision: >-
+          In the context of fetching models from more than one Git host, facing a
+          public client
+          that must stay stable, we decided that ModelFetcher depends only on
+          BaseRegistryProvider and BaseFlagProvider and that GitLab is the first registered
+          provider, to achieve a later GitHub provider without facade changes, accepting
+          that
+          GitHub is not implemented in this milestone.
+        overview:
+          problem: A GitLab-only client would have to be rewritten for GitHub.
+          goal: Two operations — download a file, and resolve a flag to coordinates.
+        architecture:
+          target: src/model_fetcher/client.py, src/model_fetcher/base.py
+          modules: [model_fetcher]
+        acceptance_criteria:
+          - download_model, get_feature_flag, and download_from_feature_flag are the
+            public operations.
+          - register_provider adds a platform without editing those methods.
+          - The package does not import an ML framework or FastAPI.
+        out_of_scope:
+          - FastAPI application. The library is a client. Pydantic models the payloads.
+            FastAPI would be a third responsibility.
+          - Loading or executing model bytes.
+        tasks:
+          - id: ARCH-001-T1
+            status: open
+            title: Implement ModelFetcher and the provider contracts
+            instructions:
+              files:
+                - src/model_fetcher/client.py
+                - src/model_fetcher/base.py
+                - src/model_fetcher/models.py
+            verification: [uv run pytest tests/test_client.py]
+      - id: CACHE-001
+        status: open
+        title: Atomic cache and SHA-256 verification
+        decision: >-
+          In the context of interrupted downloads, facing partial files being treated
+          as models,
+          we decided to stream into <file>.downloading and rename only after size
+          and SHA-256
+          checks, under <cache>/<provider>/<project>/<model>/<version>/<file>, to
+          achieve safe
+          reuse, accepting a non-unique temp name when two processes write the same
+          artifact.
+        overview:
+          problem: A killed download must not look like a finished artifact.
+          goal: Return a cached path when the file and digest are already valid.
+        architecture:
+          target: src/model_fetcher/cache.py
+          modules: [model_fetcher]
+        acceptance_criteria:
+          - Cache hits do not download the file again.
+          - force_download fetches again.
+          - A digest mismatch deletes the partial file.
+        tasks:
+          - id: CACHE-001-T1
+            status: open
+            title: Implement CacheManager
+            instructions:
+              files: [src/model_fetcher/cache.py, tests/test_cache.py]
+            verification: [uv run pytest tests/test_cache.py]
+      - id: GLREG-001
+        status: open
+        title: GitLab model registry and generic package download
+        decision: >-
+          In the context of GitLab model artifacts, facing two storage APIs, we decided
+          to
+          resolve GET /projects/:id/ml/models/:name/versions/:version (or list by
+          name) and
+          download GET /projects/:id/packages/ml_models/:version_id/files/:file, falling
+          back
+          to the generic package route when the model version is missing and a file
+          name was
+          given, to achieve both registries behind one method, accepting an extra
+          404 round
+          trip in the fallback path.
+        overview:
+          problem: Callers need one download call for model-registry and generic packages.
+          goal: Stream the file with PRIVATE-TOKEN or JOB-TOKEN and return a Path.
+        architecture:
+          target: src/model_fetcher/providers/gitlab/registry.py
+          modules: [model_fetcher]
+        acceptance_criteria:
+          - 401 and 403 raise AuthenticationError.
+          - 404 raises ModelNotFoundError.
+          - A checksum mismatch raises DownloadError and writes no final file.
+        tasks:
+          - id: GLREG-001-T1
+            status: open
+            title: Implement GitLabRegistryProvider
+            instructions:
+              files:
+                - src/model_fetcher/providers/gitlab/registry.py
+                - tests/test_gitlab_registry.py
+            verification: [uv run pytest tests/test_gitlab_registry.py]
+      - id: GLFLG-001
+        status: open
+        title: GitLab feature-flag coordinate resolution
+        decision: >-
+          In the context of choosing a model version at runtime, facing Unleash client
+          credentials and the REST feature-flag API, we decided to prefer the Unleash
+          features
+          endpoint when an instance id is configured and otherwise read the REST flag,
+          parsing
+          model_name and version from the variant payload, strategy parameters, or
+          description,
+          to achieve dynamic coordinates, accepting that gradual rollout percentages
+          are not
+          fully simulated.
+        overview:
+          problem: The model version should come from a flag payload, not only from
+            the caller.
+          goal: download_from_feature_flag fetches the coordinates the flag names.
+        architecture:
+          target: src/model_fetcher/providers/gitlab/flags.py
+          modules: [model_fetcher]
+        acceptance_criteria:
+          - A variant JSON payload downloads that model version.
+          - A disabled or missing flag does not download.
+          - user_id and environment context can reject a strategy.
+        tasks:
+          - id: GLFLG-001-T1
+            status: open
+            title: Implement GitLabFlagProvider
+            instructions:
+              files:
+                - src/model_fetcher/providers/gitlab/flags.py
+                - tests/test_gitlab_flags.py
+                - tests/test_client.py
+            verification:
+              - uv run pytest tests/test_gitlab_flags.py tests/test_client.py

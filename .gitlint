@@ -1,0 +1,15 @@
+# https://jorisroovers.com/gitlint/configuration/
+[general]
+# Ignore merge commits (no conventional title).
+ignore = merge
+# Conventional Commits for PR-style workflows; remove if you prefer a custom title regex.
+contrib = contrib-title-conventional-commits
+
+[title-max-length]
+line-length = 72
+
+[body-max-line-length]
+line-length = 100
+
+[title-must-not-contain-word]
+words = wip,WIP

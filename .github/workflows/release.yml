@@ -1,0 +1,33 @@
+---
+name: Release
+# Option A (local Commitizen): maintainer runs `cz bump`, pushes the new `v*.*.*` tag;
+# this workflow builds artifacts and creates a GitHub Release. PyPI is separate — see
+# `.github/workflows/publish-pypi.yml` (workflow_dispatch).
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+on:
+  push:
+    tags: [v*.*.*]
+permissions:
+  contents: write
+jobs:
+  github-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v8.1.0
+      - name: Sync project and dev dependencies (lockfile)
+        run: uv sync --frozen --extra dev
+      - name: Build distributions
+        run: uv build
+      - name: Publish GitHub Release (assets)
+        uses: softprops/action-gh-release@v3
+        with:
+          files: dist/*
+          generate_release_notes: true

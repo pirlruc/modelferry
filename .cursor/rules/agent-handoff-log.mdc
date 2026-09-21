@@ -1,0 +1,19 @@
+---
+description: After repo changes, add a dated entry at the top of docs/ai-agent-handoff.md for continuity.
+alwaysApply: true
+---
+
+# Agent handover log maintenance
+
+Whenever you complete a **user-requested** change to this repository or a substantive **action** that alters repo files, tooling, or layout (including config, dependencies, tests, CI, packaging), update `docs/ai-agent-handoff.md`:
+
+1. Add a new log entry at the top of the existing **Log entries** section (keep **newest first**).
+2. Include **date**, **trigger** (what was asked), **actions** (paths touched, key commands), **outcome**, and **follow-ups** if any remain.
+
+Skip logging if the conversation was purely explanatory and nothing in the repo changed—unless the user explicitly asks to record it.
+
+If `docs/ai-agent-handoff.md` is missing, recreate it using the same headings and structure as the
+current document format (including the title, the plain-text purpose line, `## How to update this
+file`, and `## Log entries (newest first)`), then continue prepending newest entries at the top.
+
+Issue methodology: [github-issue-adr](https://github.com/pirlruc/methodologies/tree/main/github-issue-adr) (Epic = decision record; applies to **new issues only**). Do not add `docs/adr/` markdown files.

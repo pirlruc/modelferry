@@ -1,0 +1,13 @@
+---
+description: Add a conventional commit suggestion in final replies after repo changes.
+alwaysApply: true
+---
+
+# Conventional commit suggestion
+
+When your work includes repository changes (code, config, docs, tests, tooling, or workflows),
+include a one-line conventional commit suggestion at the end of your final reply in this format:
+
+`type(scope): imperative description`
+
+Use common types like `fix`, `feat`, `docs`, `ci`, `refactor`, `test`, `chore`.

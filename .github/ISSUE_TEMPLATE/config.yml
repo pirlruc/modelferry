@@ -1,0 +1,7 @@
+---
+blank_issues_enabled: false
+contact_links:
+  - name: GitHub Issue-native ADR methodology
+    url: https://github.com/pirlruc/methodologies/tree/main/github-issue-adr
+    about: Epic = decision record; Task = implementation slice. Applies to new issues
+      only.

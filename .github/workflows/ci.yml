@@ -1,0 +1,60 @@
+---
+name: CI
+# Until all actions declare Node 24, opt in early (see GitHub Actions Node 20 deprecation).
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+on:
+  # All branch pushes (main + feature branches). Branch filter excludes tag pushes.
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: true
+      - name: Sync project and dev dependencies (lockfile)
+        run: uv sync --frozen --extra dev
+      - name: Ruff check
+        run: uv run ruff check src tests examples
+      - name: Ruff format
+        run: uv run ruff format --check src tests examples
+      - name: Mypy
+        run: uv run mypy -p model_fetcher -p tests
+      - name: Pylint
+        run: uv run pylint src tests
+      - name: Pytest
+        run: uv run pytest
+      - name: Bandit
+        run: uv run bandit -c pyproject.toml -r src -q
+
+      # Same-repo PRs only: fork PRs skip (avoids token / clone surprises with gitleaks-action).
+      - name: Gitleaks
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name
+          == github.repository
+        uses: gitleaks/gitleaks-action@v2.3.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Preview until stabilized upstream; resolves dev + default dependency tree.
+      - name: Dependency audit (uv)
+        run: uv audit --preview-features audit
+      - name: Build sdist and wheel
+        run: uv build

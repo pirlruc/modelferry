@@ -1,0 +1,29 @@
+---
+name: Dependabot Metadata (Dependabot PRs only)
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+  pull-requests: read
+jobs:
+  metadata:
+    name: Summarize Dependabot dependency update
+    # This workflow intentionally skips maintainer-authored PRs.
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v3.1.0
+      - name: Summarize dependency update
+        run: |-
+          {
+            echo "## Dependabot update"
+            echo
+            echo "- Dependency names: ${{ steps.metadata.outputs.dependency-names }}"
+            echo "- Dependency type: ${{ steps.metadata.outputs.dependency-type }}"
+            echo "- Update type: ${{ steps.metadata.outputs.update-type }}"
+            echo "- Package ecosystem: ${{ steps.metadata.outputs.package-ecosystem }}"
+            echo "- Directory: ${{ steps.metadata.outputs.directory }}"
+          } >> "$GITHUB_STEP_SUMMARY"
