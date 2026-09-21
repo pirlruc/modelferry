@@ -22,6 +22,7 @@ class GitLabMock:
     def __init__(self) -> None:
         """Create an empty route table."""
         self.routes: dict[tuple[str, str], Route] = {}
+        self.queues: dict[tuple[str, str], list[Route]] = {}
         self.calls: list[httpx.Request] = []
 
     def add(
@@ -51,6 +52,36 @@ class GitLabMock:
             headers=dict(headers or {}),
         )
 
+    def push(
+        self,
+        method: str,
+        path: str,
+        *,
+        status: int = 200,
+        json_body: Any = None,
+        content: bytes = b"",
+        headers: dict[str, str] | None = None,
+    ) -> None:
+        """Queue one response that is consumed before the standing route.
+
+        Args:
+            method: HTTP method.
+            path: URL path, percent-encoded the way GitLab receives it.
+            status: HTTP status code.
+            json_body: JSON payload. When set, it takes precedence over ``content``.
+            content: Raw file bytes.
+            headers: Extra response headers.
+        """
+        key = (method.upper(), path)
+        self.queues.setdefault(key, []).append(
+            Route(
+                status=status,
+                json_body=json_body,
+                content=content,
+                headers=dict(headers or {}),
+            ),
+        )
+
     def handler(self, request: httpx.Request) -> httpx.Response:
         """Answer one request from the route table.
 
@@ -62,7 +93,10 @@ class GitLabMock:
         """
         self.calls.append(request)
         path = request.url.raw_path.decode("ascii").split("?", maxsplit=1)[0]
-        route = self.routes.get((request.method.upper(), path))
+        key = (request.method.upper(), path)
+        queued = self.queues.get(key)
+        route = queued.pop(0) if queued else self.routes.get(key)
+
         if route is None:
             return httpx.Response(404, json={"message": f"no route for {path}"})
 

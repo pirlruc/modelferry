@@ -1,0 +1,60 @@
+---
+description: Keep docs/continuous-improvement.md aligned with the repo and Copilot Automations
+alwaysApply: true
+---
+
+# Continuous-improvement prompt maintenance
+
+Applies only when `docs/continuous-improvement.md` exists in this
+repo. Inert elsewhere. That file is the prompt pasted into the repository's GitHub Agents → Automations
+configuration for the **ai-reviewer** cloud-agent run.
+
+## When to update
+
+Refresh the prompt in the same session if any of the following change:
+
+| Trigger | Example |
+|---------|---------|
+| Surface the prompt reviews | Scripts, templates, Cursor rules, language packs, process docs, reusable workflows, CI toolchain Dockerfiles |
+| Pin or schema drift | Methodology/guardrails pin bump; `docs/issues-schema.md`; label vocabulary |
+| Automation contract | Output shape, tool allowlist, or trigger assumptions |
+
+Skip updates for read-only questions with no impact on those surfaces.
+
+## Anti-staleness (load-bearing)
+
+The prompt **must not** carry a file-by-file inventory, version pin, Guardrail ID count, or commit SHA that
+duplicates the repo. Name **surfaces** (what each area is for); tell the agent to derive filenames, pin
+values, and counts from the checkout at run time. Baked-in trees and numbered path inventories are how
+the previous prompts rotted.
+
+## Required section skeleton
+
+Keep these sections, in order, across every repo that carries the file:
+
+1. **Role** — reviewer identity and least-friction goal
+2. **Automation context** — single-repo scope; cite companions by URL only; no sibling checkouts
+3. **Task** — ordered steps; start with inventory + idempotency; end with PR or no-op.
+   The Task (or an early review step it calls) **must** instruct the agent to identify
+   **improvements, bugs, and design flaws** in this repository's current code, scripts,
+   templates, and docs — not only process/docs hygiene. That review scope belongs in the
+   **prompt**, not in this Cursor rule.
+4. **Output contract** — `docs/issues.yml` entries via PR; never create issues directly
+5. **Surfaces** — short role table, not a file tree
+6. **Non-negotiable constraints** — flag removals as **requires user decision**
+7. **Automation configuration** — suggested trigger, required tools, no secrets in the prompt
+
+## Output contract
+
+- Propose new work as entries appended to `docs/issues.yml` in a pull request.
+- Never `gh issue create` (or equivalent) from the automation — that bypasses the authored-manifest
+  contract and the publishing approval gate.
+- The `ai-reviewer` label is applied by `issues-sync.py` after a human merges and syncs; provenance in
+  the prompt uses epic id prefixes (`GS-`, `GR-`, `MTH-`, …) and the PR description.
+- Schema: [`docs/issues-schema.md`](https://github.com/pirlruc/github-scaffold/blob/main/docs/issues-schema.md).
+
+## Related
+
+- Issue methodology: [github-issue-adr](https://github.com/pirlruc/github-scaffold/blob/main/.cursor/rules/github-issue-adr.mdc)
+- Approval gates: [agent-workflow](https://github.com/pirlruc/github-scaffold/blob/main/.cursor/rules/agent-workflow.mdc)
+- Handoff hygiene: [ai-agent-handoff](https://github.com/pirlruc/github-scaffold/blob/main/.cursor/rules/ai-agent-handoff.mdc)

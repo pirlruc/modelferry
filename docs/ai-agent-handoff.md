@@ -18,7 +18,7 @@ entry should include:
 Do not log purely informational chat with no repo impact unless the user asks to record it.
 
 Issue methodology:
-[github-issue-adr](https://github.com/pirlruc/methodologies/tree/main/github-issue-adr). Epics in
+[github-issue-adr](https://github.com/pirlruc/methodologies/tree/1.5.0/github-issue-adr). Epics in
 [`docs/issues.yml`](issues.yml) are the decision records. Do not add `docs/adr/`.
 
 ## Delivery status
@@ -29,14 +29,16 @@ Issue methodology:
 | GitLab registry + generic package download       | Implemented                                        |
 | GitLab Unleash and REST flag resolution          | Implemented                                        |
 | Live GitHub epic issues                          | Not opened (CLI is read-only in this environment)  |
-| `docs/guardrails` submodule                      | Not pinned (`pirlruc/guardrails` returned 404)     |
+| `docs/guardrails`                                | Gitlink tag 1.6.0 (`584b209`)                      |
+| `.github/scaffold`                               | Gitlink tag 1.5.0 (`6f33f78`)                      |
 
 ## Commands
 
 ```shell
 uv sync --frozen --extra dev
 uv run pytest
-uv run ruff check src tests examples
+sh scripts/check-ci-local.sh
+uv run ruff check src tests examples scripts
 uv run ruff format --check src tests examples
 uv run mypy -p model_fetcher -p tests
 uv run pylint src tests
@@ -56,12 +58,34 @@ uv build
 ## Suggested next work
 
 - Open the Phase 1 epics from `docs/issues.yml` when issue creation is available.
-- Pin `docs/guardrails` once that repository is readable.
+- Add the Actions secret `GUARDRAILS_READ_TOKEN` so CI can fetch the private submodules.
+- Add a Dependabot secret before private submodule updates can refresh the gitlinks.
+- Configure PyPI Trusted Publishing before the first annotated tag.
 - Add a GitHub provider via `register_provider` without changing `ModelFetcher`.
 
 ______________________________________________________________________
 
 ## Log entries (newest first)
+
+### 2026-09-21 (UTC) — Guardrails 1.6.0 complexity floors
+
+**Trigger:** How complex is the code, and make it comply with guardrails 1.6.0.
+
+**Actions:** Measured radon on `src/model_fetcher`. Split every block above cyclomatic complexity 8
+and moved flag parsing into `flag_eval.py` so the maintainability index stays at or above 40. Pinned
+`docs/guardrails` at tag 1.6.0 and `.github/scaffold` at tag 1.5.0. Split CI into quality, tests,
+docs, and security workflows that read `profile.thresholds.yml`. Raised statement and branch
+coverage above 95 percent. Recorded the decision as epic GRD-001.
+
+**Outcome:** Max cyclomatic complexity is 8 and the average is about 3.1. Minimum maintainability
+index is about 42.6 and the average is about 75. No numeric gate was lowered.
+
+**Follow-ups:**
+
+- CI stays red until `GUARDRAILS_READ_TOKEN` can read `pirlruc/guardrails` and
+  `pirlruc/github-scaffold`.
+- Private submodule bumps need a Dependabot git credential. The registry block stays commented until
+  that secret exists.
 
 ### 2026-09-21 (UTC) — Initial model-fetcher library
 

@@ -4,9 +4,11 @@
 
 ### High Priority
 
-- [ ] **Pin `docs/guardrails` when the private repository is readable.** This environment received
-  HTTP 404 for `pirlruc/guardrails`, `pirlruc/github-scaffold`, and `pirlruc/methodologies`. Quality
-  gates were copied from the public `pirlruc/pymjolnir` Python scaffold instead of a submodule pin.
+- [x] **Pin `docs/guardrails` at tag 1.6.0 and `.github/scaffold` at tag 1.5.0.** CI fetches those
+  private gitlinks with the Actions secret `GUARDRAILS_READ_TOKEN`.
+- [ ] **Store `GUARDRAILS_READ_TOKEN` as an Actions secret** with contents read on
+  `pirlruc/guardrails` and `pirlruc/github-scaffold`. Quality, test, and docs workflows fail closed
+  without it.
 - [ ] **Open the Phase 1 epics in GitHub from `docs/issues.yml`.** The agent GitHub CLI is read-only
   here, so the decision records exist in-repo and still need live epic/task issues.
 
@@ -14,8 +16,10 @@
 
 - [ ] **Add a GitHub Releases provider** behind `register_provider("github", ...)` without changing
   `ModelFetcher`.
-- [ ] **Publish a coverage gate** once a threshold is chosen. Tests cover the cache, both GitLab
-  registries, flag payloads, and the facade. CI runs pytest without a coverage floor.
+- [x] **Coverage gate.** Statement and branch coverage both use the 95 percent floors in guardrails
+  1.6.0 (`scripts/check-python-coverage.py`).
+- [ ] **Dependabot access to the private submodules.** `gitsubmodule` is in the monthly group. Add a
+  Dependabot git registry only after `DEPENDABOT_GITHUB_TOKEN` exists.
 - [ ] **Configure PyPI Trusted Publishing** for `model-fetcher` and
   `.github/workflows/publish-pypi.yml` before the first publish.
 

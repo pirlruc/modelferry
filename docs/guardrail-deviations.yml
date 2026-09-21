@@ -1,0 +1,36 @@
+# Recorded departures from the guardrails pinned at docs/guardrails/.
+#
+# One entry per deviation, and only here — issues-sync.py renders matching entries into the
+# Epic body, so nothing is copied into docs/issues.yml or into issue text by hand.
+#
+# Field definitions: https://github.com/pirlruc/guardrails#deviation-rule
+# Approval flow:     https://github.com/pirlruc/methodologies/blob/1.5.0/github-issue-adr/docs/process/guardrail-compliance.md
+#
+# Being stricter than the org default is always allowed and needs no entry here.
+
+deviations: []
+
+# Parameterized guardrail — the org default is a number and the repo uses a different one.
+# Lowering a gate requires `epic` and `approved_by`.
+#
+# - id: CPP-TEST-003                # Guardrail ID (required)
+#   key: statement_coverage         # threshold key or tool name from profile.thresholds.yml
+#   org_default: 95
+#   repo_value: 90
+#   why: Legacy module lacks fixture coverage; remediating in Phase 2
+#   epic: COV-001                   # Epic issue acting as the decision record
+#   owner: <maintainer>
+#   approved_by: Engineering Lead
+#   review: 2026-12-31              # when this entry is re-examined
+
+# Non-parameterized guardrail — the gate does not apply as written, so there is no
+# org_default/repo_value pair. Use `details` when the rationale needs measurement evidence.
+#
+# - id: CPP-TEST-003
+#   why: Header-only compile-time library has zero instrumentable runtime lines; a coverage
+#        ratio is undefined rather than lowered
+#   epic: COVENF-001
+#   owner: <maintainer>
+#   approved_by: Engineering Lead
+#   review: 2026-12-31
+#   details: docs/coverage-deviation.md

@@ -124,13 +124,18 @@ Releases use local Commitizen, matching the pirlruc Python scaffold.
 
 ```shell
 uv sync --frozen --extra dev
+git submodule update --init docs/guardrails .github/scaffold
 uv run pre-commit install
-uv run pytest
+sh scripts/check-ci-local.sh
 ```
 
-`uv build` produces the sdist and wheel. Pushing a `vX.Y.Z` tag runs the Release workflow. PyPI
-publishing is the manual **Publish to PyPI** workflow.
+`docs/guardrails` is pinned at tag 1.6.0 and `.github/scaffold` at tag 1.5.0. Local and CI gates
+read `docs/guardrails/python/profile.thresholds.yml`. CI needs an Actions secret named
+`GUARDRAILS_READ_TOKEN` that can read those private repositories.
+
+`uv build` produces the sdist and wheel. An annotated `vX.Y.Z` tag runs the Release workflow, which
+publishes a GitHub Release. That release publishes to PyPI with Trusted Publishing.
 
 Decisions are GitHub epics, not ADR markdown files. The backlog lives in `docs/issues.yml`.
 Methodology:
-[github-issue-adr](https://github.com/pirlruc/methodologies/tree/main/github-issue-adr).
+[github-issue-adr](https://github.com/pirlruc/methodologies/tree/1.5.0/github-issue-adr).

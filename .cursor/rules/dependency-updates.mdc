@@ -1,0 +1,87 @@
+---
+description: Org Dependabot policy — one multi-ecosystem PR, monthly, all semver levels (SC-DEP-*)
+globs: "**/dependabot.yml,**/dependabot.yaml"
+alwaysApply: false
+---
+
+# Dependency updates (SC-DEP-*)
+
+Governs `.github/dependabot.yml` (and `.yaml`). Cite Guardrail IDs from
+[`docs/guardrails/supply-chain/`](https://github.com/pirlruc/guardrails/tree/1.6.0/supply-chain).
+Cadence and open-PR limit come from `docs/guardrails/supply-chain/profile.thresholds.yml` — do not bake numbers
+into this rule.
+
+Process companion:
+[dependency-updates.md](https://github.com/pirlruc/methodologies/blob/1.5.0/github-issue-adr/docs/process/dependency-updates.md).
+
+## Required shape
+
+- **SC-DEP-001** — One `updates` entry for every package ecosystem present (always include `github-actions`).
+- **SC-DEP-002** — Single PR per repo via top-level `multi-ecosystem-groups` and `multi-ecosystem-group` on each entry.
+- **SC-DEP-003** — Interval and blocked-semver policy from the thresholds file; allow major, minor, and patch
+  (no `ignore` that drops a semver level without a recorded deviation).
+
+```yaml
+version: 2
+
+multi-ecosystem-groups:
+  all-dependencies:
+    schedule:
+      interval: monthly   # from profile.thresholds.yml
+      time: "06:00"
+      timezone: Europe/Lisbon
+    commit-message:
+      prefix: build
+      include: scope
+
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    patterns: ["*"]
+    multi-ecosystem-group: all-dependencies
+```
+
+## Multi-ecosystem rules
+
+- `patterns` is **mandatory** on every entry that joins a multi-ecosystem group; use `["*"]` for all deps.
+- **Group-only** (set under `multi-ecosystem-groups`, never per ecosystem): `schedule`, `commit-message`,
+  `target-branch`, `milestone`, `pull-request-branch-name`.
+- **Additive** across group and ecosystem: `assignees`, `labels`.
+- Prefer `commit-message.prefix: build` with `include: scope` so titles match Conventional Commits
+  (`build(deps): …`).
+- Prefer the uniform multi-ecosystem shape even when only one ecosystem exists — adding docker/uv later stays trivial.
+
+## Private access (personal accounts)
+
+Org **Grant Dependabot access** is org-only. On a personal account:
+
+1. Fine-grained PAT with Contents: Read on every private repo Dependabot clones — **including submodules**
+   and private reusable-workflow hosts, not only package deps.
+2. Store as a **Dependabot** secret (Settings → Secrets and variables → Dependabot),
+   not an Actions secret. Actions jobs cannot read Dependabot secrets. Wire
+   top-level `registries:` `type: git`.
+3. For private OCI (e.g. `dhi.io`), Dependabot `DOCKERHUB_*` secrets + `type: docker-registry`.
+4. Keep the seed's `registries:` block **commented** until those secrets exist.
+   Uncommented stubs fail Dependabot closed for every consumer.
+5. Seed comments: [dependabot.example.yml](https://github.com/pirlruc/github-scaffold/blob/main/templates/dependabot.example.yml).
+
+## Migration and verification
+
+1. Close stale per-ecosystem Dependabot PRs before expecting the grouped PR (open-PR limit).
+2. Merge to the default branch; touch `dependabot.yml` to re-trigger if needed.
+3. Confirm `build(deps): … all-dependencies …` or Insights → Dependabot; record in handoff.
+4. Pilot: [pirlruc/gitlab-mcp](https://github.com/pirlruc/gitlab-mcp).
+
+## CI interaction
+
+Skip jobs that need **Actions** secrets when `github.actor == 'dependabot[bot]'`
+([CI-024](https://github.com/pirlruc/guardrails/blob/1.6.0/ci/guardrails.md)). Dependabot secrets are for
+version updates only.
+
+## Do not
+
+- Use per-ecosystem `groups:` as a substitute for `multi-ecosystem-groups` when the goal is one PR per repo.
+- Add `ignore` rules that exclude major, minor, or patch without a `docs/guardrail-deviations.yml` entry citing
+  `SC-DEP-003`.
+- Overwrite a consumer's existing `.github/dependabot.yml` from sync — the scaffold seeds it once
+  (`templates/dependabot.example.yml`).

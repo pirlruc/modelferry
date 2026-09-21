@@ -1,0 +1,52 @@
+---
+description: Reference other repositories by GitHub URL, never by local checkout layout
+alwaysApply: true
+---
+
+# Cross-repo linkage
+
+Every repository is standalone. Where a sibling repo happens to sit on disk is incidental to the machine it was
+cloned on, so nothing committed may depend on it.
+
+## Use
+
+```markdown
+https://github.com/pirlruc/<repo>
+https://github.com/pirlruc/<repo>/tree/<ref>/<path>
+https://github.com/pirlruc/<repo>/blob/<ref>/<path>
+```
+
+Pin `<ref>` to a tag or SHA when the link backs a decision, a threshold, or a pinned submodule. Use `main` only for
+links that should always track the tip.
+
+## Do not use
+
+| Anti-pattern | Why |
+|--------------|-----|
+| `../../guardrails/cpp/guardrails.md` | Assumes a shared parent directory |
+| `/home/<user>/Developer/...` | Machine-specific absolute path |
+| `documentation/guardrails/...` from another repo | Assumes a monorepo that does not exist |
+| A library folder name as a path root (`traits/docs/issues.yml`) | Assumes the old monorepo layout |
+
+## Scope
+
+Applies to markdown, `.mdc` rules, scripts, CI workflows, and `.gitmodules` URLs.
+
+Relative paths remain correct **within** a repo — `docs/issues.yml`, `.github/scaffold/scripts/sync-templates.sh` —
+including into a submodule checkout, because the submodule is part of that repo's tree.
+
+## Consuming another repo's content
+
+Pin it as a submodule with an HTTPS URL and reference it through the local mount point:
+
+```bash
+git submodule add https://github.com/pirlruc/guardrails.git docs/guardrails
+```
+
+Scripts that need the consuming repo root derive it from `git rev-parse --show-toplevel` or an explicit
+`CONSUMING_REPO_ROOT`, never from a hardcoded folder list.
+
+## Related
+
+- Approval gates for submodule pointer bumps: [agent-workflow.mdc](agent-workflow.mdc)
+- Guardrails submodule pinning: [guardrails-compliance.mdc](guardrails-compliance.mdc)

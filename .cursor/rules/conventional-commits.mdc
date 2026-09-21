@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Conventional Commits
 
-When creating a commit, use [Conventional Commits](https://www.conventionalcommits.org/):
+When the user asks for a commit (or you commit with explicit approval), use [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```
 <type>(<scope>): <subject>
@@ -18,8 +18,8 @@ When creating a commit, use [Conventional Commits](https://www.conventionalcommi
 ## Format rules
 
 - **Subject:** imperative mood, lowercase, no trailing period, ~72 chars max
-- **Scope:** optional but recommended — module or area (for example `gitlab`, `cache`, `ci`)
-- **Body:** explain why, not what; wrap at ~100 chars
+- **Scope:** optional but recommended — module, library folder, or area (e.g. `traits`, `drawer`, `ci`, `docs`)
+- **Body:** explain *why*, not *what*; wrap at ~72 chars
 - **Breaking changes:** `feat!:` or footer `BREAKING CHANGE: <description>`
 
 ## Allowed types
@@ -29,13 +29,39 @@ When creating a commit, use [Conventional Commits](https://www.conventionalcommi
 | `feat` | New capability or user-visible behavior |
 | `fix` | Bug fix |
 | `docs` | Documentation only |
-| `chore` | Maintenance, tooling, deps |
+| `chore` | Maintenance, tooling, deps (no production code behavior change) |
 | `refactor` | Code change without fixing a bug or adding a feature |
 | `test` | Tests only |
 | `ci` | CI/CD workflow or pipeline changes |
-| `build` | Build system or packaging |
+| `build` | Build system, CMake, Gradle, vcpkg |
+| `perf` | Performance improvement |
+| `style` | Formatting, whitespace (no logic change) |
+
+## Examples
+
+```
+feat(traits): add is_detected_v concept alias
+
+fix(ci): restore blocking flag on cpp-docs workflow
+
+docs(issues): document github-scaffold sync in issues-index
+
+chore(scaffold): sync epic template Y-statement section
+
+refactor(drawer): simplify page element layout validation
+
+test(flow): cover typed graph cycle detection
+```
+
+## Scope guardrails
+
+Approval for commits, pushes, and OS installs lives in
+[agent-workflow.mdc](agent-workflow.mdc). Do not amend, force-push, or skip
+hooks unless the user requests it. Match the consuming repo's existing commit
+message style when in doubt.
 
 ## Related
 
-- Issue methodology: [github-issue-adr](https://github.com/pirlruc/methodologies/tree/main/github-issue-adr)
-- Handoff hygiene: [agent-handoff-log.mdc](agent-handoff-log.mdc)
+- Approval gates and branch naming: [agent-workflow.mdc](agent-workflow.mdc)
+- Issue methodology: [github-issue-adr.mdc](github-issue-adr.mdc)
+- Handoff hygiene: [ai-agent-handoff.mdc](ai-agent-handoff.mdc)

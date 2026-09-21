@@ -1,0 +1,40 @@
+---
+description: Approval gates and branch naming for agent-driven work
+alwaysApply: true
+---
+
+# Agent workflow guardrails
+
+## Never without explicit approval
+
+| Action | Examples |
+|--------|----------|
+| Installing on the system OS | `apt-get install`, `brew install`, `pip install` / `pip install --user` into system Python, `npm i -g`, SDK/toolchain installers, `vcpkg install` outside the manifest |
+| Writing to git history | `git commit`, `git tag`, `git merge`, `git rebase`, `git cherry-pick`, submodule pointer bumps |
+| Creating or moving refs | `git branch`, `git checkout -b`, `git switch -c`, branch deletion (local or remote) |
+| Publishing | `git push`, `gh pr create`, `gh pr merge`, `gh release create`, creating issues via `issues-sync.py` |
+
+### No approval needed
+
+Using tools already on PATH; project-local environments (`uv sync`, `pip install` into `.venv`, `npm ci` in the
+repo); configuring/building into repo build directories; running tests; pulling/running Docker images.
+See [build-test-environments.mdc](build-test-environments.mdc).
+
+When a task requires any gated action above, stop and ask, stating exactly what will be run.
+Approval is per action, not per session: a prior "yes" to a commit is not a "yes" to push.
+
+## Branch naming
+
+Create branches as `feature-<purpose>`, lowercase, hyphen-separated:
+
+- `feature-odr-concepts`, `feature-protobuf-export`, `feature-agent-rules`
+- not `feat/odr`, `nuno/fix`, `patch-1`
+
+## Related
+
+- Commit message format: [conventional-commits.mdc](conventional-commits.mdc)
+- Handoff hygiene: [ai-agent-handoff.mdc](ai-agent-handoff.mdc)
+- Build/test environments (local, venv, then Docker): [build-test-environments.mdc](build-test-environments.mdc)
+- Guardrail compliance before finishing: [guardrails-compliance.mdc](guardrails-compliance.mdc)
+- Issue and decision methodology: [github-issue-adr.mdc](github-issue-adr.mdc)
+- Referencing other repos: [cross-repo-links.mdc](cross-repo-links.mdc)

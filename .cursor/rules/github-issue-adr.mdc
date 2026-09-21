@@ -1,0 +1,48 @@
+---
+description: Follow the github-issue-adr methodology for decisions, epics, and tasks
+alwaysApply: true
+---
+
+# github-issue-adr methodology
+
+[github-issue-adr](https://github.com/pirlruc/methodologies/tree/1.5.0/github-issue-adr) is the methodology for every
+repo carrying this scaffold. Do not introduce a second decision-record format alongside it.
+
+## Core model
+
+| Concept | Where it lives |
+|---------|----------------|
+| Decision record | An **Epic** issue — not an ADR markdown file |
+| Unit of work | A **Task** issue, linked as a native sub-issue of its Epic |
+| Decision log | The GitHub issue list, filtered by the `epic` label |
+| Authored backlog | `docs/issues.yml` in the repo |
+
+Applies to **new** issues only. Existing issues are not retroactively reformatted.
+
+## Rules
+
+- Do not create `docs/adr/` or `decisions/` markdown trees. If a decision needs recording, it is an Epic.
+- Do not maintain task checklists in the Epic body — they drift from the sub-issues. Use native sub-issue linking.
+- Title IDs are stable and cited everywhere: `Epic: [TOOL-001] …`, `Task: [TOOL-001-T1] …`.
+- Cite Guardrail IDs (e.g. `CPP-TEST-003`) in Epic constraints, Task verification, and PR descriptions.
+- Every PR references its Task, and its Epic when the change is Major.
+
+## docs/issues.yml is the source of truth
+
+Author issues in `docs/issues.yml`, then sync. Never hardcode issue content into scripts, and never hand-create an
+issue that the manifest should own — the two drift immediately.
+
+```bash
+python3 .github/scaffold/scripts/issues-sync.py --repo pirlruc/<repo> --yaml docs/issues.yml --dry-run
+```
+
+Creating issues is a publishing action and needs approval — see [agent-workflow.mdc](agent-workflow.mdc). Run
+`--dry-run` first and show the result.
+
+Schema: [`docs/issues-schema.md`](https://github.com/pirlruc/github-scaffold/blob/main/docs/issues-schema.md).
+
+## Related
+
+- Guardrail compliance and deviations: [guardrails-compliance.mdc](guardrails-compliance.mdc)
+- Approval gates: [agent-workflow.mdc](agent-workflow.mdc)
+- Handoff hygiene: [ai-agent-handoff.mdc](ai-agent-handoff.mdc)

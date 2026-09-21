@@ -1,0 +1,53 @@
+---
+description: Prefer host PATH and project-local envs; use Docker when those are missing
+alwaysApply: true
+---
+
+# Build and test environments
+
+Use what is already available locally before reaching for a container. Docker remains the path when a
+tool is missing from the host and cannot be satisfied by a project-local environment.
+
+## Order of preference
+
+1. Tools already on the host PATH — no install.
+2. Project-local environments that do not touch the system OS — e.g. `.venv` / `uv sync`, project
+   `node_modules` / `npm ci`, CMake or Gradle builds into repo build directories.
+3. Docker, the repo `.devcontainer/`, or a repo container runner when the tool is not available via (1)
+   or (2).
+4. Host-only cases that cannot be containerized (device or emulator tests, host-native valgrind,
+   platform SDKs). Document a new gap in `docs/ai-agent-handoff.md` under known pitfalls.
+
+## What needs no approval
+
+- Running tools already on PATH
+- Creating or using project-local envs (`uv sync`, `pip install` into `.venv`, `npm ci` in the repo)
+- Configuring and building into repo build directories
+- Running tests
+- Pulling and running Docker images
+
+## What needs approval
+
+Installing into the **system OS** — see [agent-workflow.mdc](agent-workflow.mdc). Needing a missing
+tool is the signal to use a project-local env or to containerize, not to install system-wide.
+
+## Keeping host and container builds apart
+
+Use a distinct build directory per execution context so CMake and Gradle caches never mix absolute paths:
+
+```bash
+build/            # container
+build-host/       # host-native
+```
+
+## Reference implementation
+
+[heimdall](https://github.com/pirlruc/heimdall) runs host PATH plus project-local virtualenvs first and fills the
+remaining gaps in Docker via
+[`scripts/check-ci-docker.sh`](https://github.com/pirlruc/heimdall/blob/main/scripts/check-ci-docker.sh), with a
+per-tool host-vs-Docker resolution table. Mirror that structure when adding container runners to a repo.
+
+## Related
+
+- Approval gates for system installs: [agent-workflow.mdc](agent-workflow.mdc)
+- Recording host-only gaps: [ai-agent-handoff.mdc](ai-agent-handoff.mdc)

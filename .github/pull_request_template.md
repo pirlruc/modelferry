@@ -16,16 +16,16 @@
 
 - [ ] CI passes (quality, tests, docs, security as applicable)
 - [ ] No unresolved blocking review comments
-- [ ] Verification commands from the Task issue or the Python scaffold executed locally
-- [ ] Referenced Guardrail IDs / documented deviations listed when `docs/guardrails/` is pinned
+- [ ] Verification commands from Task issue or guardrails profile executed locally
+- [ ] Referenced Guardrail IDs / documented deviations listed (e.g. `CPP-TEST-003`)
 
 ### For Major changes only
 
 - [ ] Implementation aligns with parent Epic decision (Y-statement / acceptance criteria)
 - [ ] Epic-Specific Constraints respected (if any), including Guardrail ID deviations
+- [ ] Rollback / mitigation noted for this Major change
 
 ## Methodology
 
-Epic issues are decision records — no ADR markdown files. See
-[github-issue-adr](https://github.com/pirlruc/methodologies/tree/1.0.0/github-issue-adr)
-(methodologies @ `1.0.0`). The in-repo backlog is [`docs/issues.yml`](docs/issues.yml).
+Epic issues are decision records — no ADR markdown files.
+See [github-issue-adr](https://github.com/pirlruc/methodologies/tree/1.5.0/github-issue-adr) (methodologies @ `1.5.0`).

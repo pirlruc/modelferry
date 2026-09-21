@@ -47,6 +47,9 @@ repos:
     rev: 1.0.0
     hooks:
       - id: mdformat
+        # Issue and PR templates keep YAML front matter. mdformat turns the leading
+        # --- into a thematic break and GitHub then ignores the template.
+        exclude: ^\.github/(ISSUE_TEMPLATE/|pull_request_template\.md$)
         args: [--wrap=100, --number]
         additional_dependencies: [mdformat-gfm]
   - repo: https://github.com/crate-ci/typos

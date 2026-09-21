@@ -1,0 +1,60 @@
+---
+description: Verify repo compliance with pinned guardrails and record deviations properly
+alwaysApply: true
+---
+
+# Guardrails compliance
+
+Each repo pins [pirlruc/guardrails](https://github.com/pirlruc/guardrails) at `docs/guardrails/`. That submodule is
+the org default, not a suggestion. Before finishing repo work, confirm the repo still complies with it.
+
+## Check
+
+1. The submodule is initialized and pinned (`git submodule status docs/guardrails` shows a SHA, not `-`).
+2. Gates the change touches match `docs/guardrails/<lang>/profile.thresholds.yml`.
+3. Behaviour the change touches matches the principles in `docs/guardrails/<lang>/guardrails.md`.
+4. Every existing entry in `docs/guardrail-deviations.yml` is still needed and past-due `review:` dates are raised.
+
+## When the repo does not comply
+
+Never silently lower a gate, loosen a CI condition, or add a suppression to make a check pass. Choose one of three
+paths and say which you are taking:
+
+| Situation | Action |
+|-----------|--------|
+| The repo is wrong | Fix the repo to meet the guardrail |
+| The guardrail is wrong for everyone | Propose the change to [pirlruc/guardrails](https://github.com/pirlruc/guardrails) with an explanation and **ask for approval**. If rejected, fall back to one of the other two rows |
+| The guardrail is right but this repo genuinely cannot meet it | Record a deviation |
+
+Stricter than the org default is always allowed and needs no record.
+
+## Recording a deviation
+
+One entry in the repo's `docs/guardrail-deviations.yml`, and nowhere else. Numeric fields are omitted when the
+guardrail is not parameterized by a number:
+
+```yaml
+deviations:
+  - id: CPP-TEST-003
+    key: statement_coverage
+    org_default: 95
+    repo_value: 90
+    why: Legacy module lacks fixture coverage; remediating in Phase 2
+    epic: COV-001
+    owner: <maintainer>
+    approved_by: Engineering Lead
+    review: 2026-12-31
+```
+
+Lowering a gate below the org default requires an Epic acting as the decision record and Engineering Lead approval.
+`issues-sync.py` renders these entries into the Epic body — do not also paste them into `docs/issues.yml` or into the
+issue text by hand.
+
+Field definitions: [guardrails deviation rule](https://github.com/pirlruc/guardrails#deviation-rule).
+Process and approval flow:
+[guardrail-compliance.md](https://github.com/pirlruc/methodologies/blob/1.5.0/github-issue-adr/docs/process/guardrail-compliance.md).
+
+## Related
+
+- Approval gates: [agent-workflow.mdc](agent-workflow.mdc)
+- Epic as decision record: [github-issue-adr.mdc](github-issue-adr.mdc)

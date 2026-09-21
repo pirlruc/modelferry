@@ -1,37 +1,30 @@
----
+# SC-DEP-001/002/003. Cadence from docs/guardrails/supply-chain/profile.thresholds.yml.
+# Private submodule fetches need a Dependabot git registry and DEPENDABOT_GITHUB_TOKEN.
+# Leave that registry commented until the secret exists; an empty secret fails closed.
 version: 2
-updates:
-  - package-ecosystem: uv
-    directory: /
+multi-ecosystem-groups:
+  all-dependencies:
     schedule:
-      interval: weekly
-      day: monday
+      interval: monthly
       time: "06:00"
       timezone: Europe/Lisbon
-    open-pull-requests-limit: 5
-    groups:
-      python-dev-tooling:
-        dependency-type: development
-        patterns: ['*']
+    commit-message:
+      prefix: build
+      include: scope
+updates:
   - package-ecosystem: github-actions
     directory: /
-    schedule:
-      interval: weekly
-      day: monday
-      time: "06:15"
-      timezone: Europe/Lisbon
-    open-pull-requests-limit: 5
-    groups:
-      github-actions:
-        patterns: ['*']
+    patterns: ["*"]
+    multi-ecosystem-group: all-dependencies
+  - package-ecosystem: uv
+    directory: /
+    patterns: ["*"]
+    multi-ecosystem-group: all-dependencies
   - package-ecosystem: pre-commit
     directory: /
-    schedule:
-      interval: weekly
-      day: monday
-      time: "06:30"
-      timezone: Europe/Lisbon
-    open-pull-requests-limit: 5
-    groups:
-      pre-commit-hooks:
-        patterns: ['*']
+    patterns: ["*"]
+    multi-ecosystem-group: all-dependencies
+  - package-ecosystem: gitsubmodule
+    directory: /
+    patterns: ["*"]
+    multi-ecosystem-group: all-dependencies

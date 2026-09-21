@@ -1,0 +1,6 @@
+[submodule "guardrails"]
+	path = docs/guardrails
+	url = https://github.com/pirlruc/guardrails.git
+[submodule "github-scaffold"]
+	path = .github/scaffold
+	url = https://github.com/pirlruc/github-scaffold.git

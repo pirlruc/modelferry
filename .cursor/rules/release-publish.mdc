@@ -1,0 +1,30 @@
+---
+description: Shared release versioning, changelog, and publish contract (REL-VER/CHG/PUB)
+globs: "**/CHANGELOG*,**/RELEASE*,**/.release-please*,**/release-please*,**/commitizen*,**/cz.yaml,**/.cz.toml,**/action-gh-release*"
+alwaysApply: false
+---
+
+# Release and publish (REL-*)
+
+Cite Guardrail IDs from
+[`docs/guardrails/release/`](https://github.com/pirlruc/guardrails/tree/1.6.0/release).
+Conventional Commits (see [conventional-commits.mdc](conventional-commits.mdc)) govern commit **input**;
+this rule governs release **output**. Do not bake cadence numbers into this file.
+
+## Required citations
+
+| ID | When it applies |
+|----|-----------------|
+| **REL-VER-001** / **REL-VER-002** | Single version source of truth; SemVer (or ecosystem equivalent); `latest` is never the only tag |
+| **REL-CHG-001** / **REL-CHG-002** | Human-readable changelog for consumer-installable releases; keep consistent with Conventional Commits |
+| **REL-PUB-001** / **REL-PUB-002** | Publish from trusted trigger (annotated tag); least-privilege token scopes |
+| **REL-PUB-003** | Attach or link SC-SBOM / SC-SIGN / SC-PROV artifacts when those gates apply |
+
+Image-specific tag/digest rules stay under **DOCKER-DELIV-001** (cites REL-VER-*). Language `*-DELIV-*` /
+`*-CHG-*` stay scoped to PR size and rollback notes — do not restate REL-*.
+
+## Do not
+
+- Recompute the version independently in each publish path (wheels vs images vs GitHub Releases).
+- Publish from an arbitrary branch tip.
+- Omit a changelog for a release consumers can install without a recorded deviation.

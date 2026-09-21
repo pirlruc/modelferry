@@ -191,42 +191,11 @@ class CacheManager:
         expected = normalize_sha256(expected_sha256)
         destination.parent.mkdir(parents=True, exist_ok=True)
         temporary = destination.with_name(destination.name + ".downloading")
-        digest = hashlib.sha256()
-        size = 0
         try:
-            with temporary.open("wb") as handle:
-                for chunk in chunks:
-                    if not chunk:
-                        continue
-
-                    handle.write(chunk)
-                    digest.update(chunk)
-                    size += len(chunk)
-
-                handle.flush()
-                os.fsync(handle.fileno())
-
-            file_hash = digest.hexdigest()
-            if size == 0:
-                raise DownloadError(f"Downloaded artifact {destination.name} was empty")
-
-            if expected_size is not None and size != expected_size:
-                raise DownloadError(
-                    f"Incomplete download for {destination.name}: "
-                    f"received {size} bytes, expected {expected_size}",
-                )
-
-            if expected is not None and file_hash != expected:
-                raise DownloadError(
-                    f"SHA-256 mismatch for {destination.name}: "
-                    f"expected {expected}, computed {file_hash}",
-                )
-
+            size, file_hash = _stream_to(temporary, chunks)
+            _assert_complete(destination.name, size, file_hash, expected, expected_size)
             os.replace(temporary, destination)
-            sidecar = Path(str(destination) + ".sha256")
-            sidecar_tmp = Path(str(sidecar) + ".downloading")
-            sidecar_tmp.write_text(f"{file_hash}\n", encoding="utf-8")
-            os.replace(sidecar_tmp, sidecar)
+            _write_sidecar(destination, file_hash)
         except Exception:  # pylint: disable=broad-exception-caught
             # The caller-supplied stream can fail in provider-specific ways.
             temporary.unlink(missing_ok=True)
@@ -249,19 +218,119 @@ class CacheManager:
         Returns:
             The lowercase digest, or ``None`` when the file must be fetched again.
         """
-        partial = path.with_name(path.name + ".downloading")
-        if partial.exists() or not path.is_file() or path.stat().st_size == 0:
+        if not _cache_file_ready(path):
             return None
 
         actual = file_sha256(path)
-        sidecar = Path(str(path) + ".sha256")
-        if sidecar.is_file():
-            recorded = sidecar.read_text(encoding="utf-8").strip().split()
-            if not recorded or recorded[0].lower() != actual:
-                return None
+        if not _sidecar_matches(path, actual):
+            return None
 
         expected = normalize_sha256(expected_sha256)
         if expected is not None and actual != expected:
             return None
 
         return actual
+
+
+def _stream_to(temporary: Path, chunks: Iterator[bytes]) -> tuple[int, str]:
+    """Write chunks to ``temporary`` and return the size and SHA-256.
+
+    Args:
+        temporary: Incomplete download path.
+        chunks: File body in order.
+
+    Returns:
+        Byte count and lowercase digest of the bytes that were written.
+    """
+    digest = hashlib.sha256()
+    size = 0
+    with temporary.open("wb") as handle:
+        for chunk in chunks:
+            if not chunk:
+                continue
+
+            handle.write(chunk)
+            digest.update(chunk)
+            size += len(chunk)
+
+        handle.flush()
+        os.fsync(handle.fileno())
+
+    return size, digest.hexdigest()
+
+
+def _assert_complete(
+    name: str,
+    size: int,
+    file_hash: str,
+    expected_sha256: str | None,
+    expected_size: int | None,
+) -> None:
+    """Reject an empty, short, or mismatched download.
+
+    Args:
+        name: Artifact file name used in error messages.
+        size: Bytes written.
+        file_hash: Digest of the bytes written.
+        expected_sha256: Required digest, when the caller has one.
+        expected_size: Required length, when the caller has one.
+
+    Raises:
+        DownloadError: If the stream is empty, short, or the digest differs.
+    """
+    if size == 0:
+        raise DownloadError(f"Downloaded artifact {name} was empty")
+
+    if expected_size is not None and size != expected_size:
+        raise DownloadError(
+            f"Incomplete download for {name}: received {size} bytes, expected {expected_size}",
+        )
+
+    if expected_sha256 is not None and file_hash != expected_sha256:
+        raise DownloadError(
+            f"SHA-256 mismatch for {name}: expected {expected_sha256}, computed {file_hash}",
+        )
+
+
+def _write_sidecar(destination: Path, file_hash: str) -> None:
+    """Replace the checksum sidecar after the artifact itself is in place.
+
+    Args:
+        destination: Final artifact path.
+        file_hash: Digest to record.
+    """
+    sidecar = Path(str(destination) + ".sha256")
+    sidecar_tmp = Path(str(sidecar) + ".downloading")
+    sidecar_tmp.write_text(f"{file_hash}\n", encoding="utf-8")
+    os.replace(sidecar_tmp, sidecar)
+
+
+def _cache_file_ready(path: Path) -> bool:
+    """Return whether ``path`` is a finished non-empty file.
+
+    Args:
+        path: Candidate artifact path.
+
+    Returns:
+        False when a sibling download marker exists or the file is missing or empty.
+    """
+    partial = path.with_name(path.name + ".downloading")
+    return not partial.exists() and path.is_file() and path.stat().st_size > 0
+
+
+def _sidecar_matches(path: Path, actual: str) -> bool:
+    """Return whether a checksum sidecar agrees with ``actual``.
+
+    Args:
+        path: Artifact path.
+        actual: Digest of the bytes on disk.
+
+    Returns:
+        True when no sidecar exists or its first field equals ``actual``.
+    """
+    sidecar = Path(str(path) + ".sha256")
+    if not sidecar.is_file():
+        return True
+
+    recorded = sidecar.read_text(encoding="utf-8").strip().split()
+    return bool(recorded) and recorded[0].lower() == actual

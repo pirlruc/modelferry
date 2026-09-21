@@ -1,6 +1,10 @@
-______________________________________________________________________
-
-## name: "Task Issue" description: "Implementation slice. Link as sub-issue of parent epic (Major) or standalone (Standard)." title: "Task: [ID-TN] Brief Title" labels: ["task", "ai-implementer"] assignees: ''
+---
+name: "Task Issue"
+description: "Implementation slice. Link as sub-issue of parent epic (Major) or standalone (Standard)."
+title: "Task: [ID-TN] Brief Title"
+labels: ["task", "ai-implementer"]
+assignees: ''
+---
 
 <!-- Link this issue as a sub-issue of its epic in the sidebar (Major changes). -->
 
@@ -15,7 +19,7 @@ ______________________________________________________________________
 ## Context to Read First
 
 - `path/to/relevant/file.ext`
-- `docs/issues.yml` — parent epic id
+- `docs/guardrails/` — applicable Guardrail IDs: <!-- e.g. CPP-TEST-003, CPP-LINT-001 -->
 
 ## Instructions
 
@@ -34,18 +38,16 @@ ______________________________________________________________________
 
 ## Acceptance Criteria
 
-- \[ \]
+- [ ]
 - [ ] Tests added or updated (if applicable)
 
 ## Verification
 
-<!-- Commands from the Python scaffold. Cite Guardrail IDs when docs/guardrails is pinned. -->
+<!-- Commands from guardrails or epic constraints only — do not duplicate epic acceptance criteria -->
+<!-- Cite Guardrail IDs whose gates this verification exercises -->
 
 ```bash
-uv sync --frozen --extra dev
-uv run pytest
-uv run ruff check src tests
-uv run mypy -p model_fetcher -p tests
+# e.g. cmake --preset default && ctest --test-dir build/default
 ```
 
 ## AI metadata
@@ -54,4 +56,4 @@ uv run mypy -p model_fetcher -p tests
 
 - **creator:** AI_Implementer_1
 - **confidence_score:**
-- **target_branch:** `feature/<branch_name>`
+- **target_branch:** `feature-<purpose>`

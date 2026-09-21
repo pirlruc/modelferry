@@ -1,0 +1,47 @@
+---
+description: Production container image authoring (product artifact, not tooling env)
+globs: "**/Dockerfile*,**/.dockerignore,**/container-structure-test*.y*ml,**/*compose*.y*ml"
+alwaysApply: false
+---
+
+# Container images (product artifacts)
+
+[build-test-environments.mdc](build-test-environments.mdc) governs containers used as a
+**tooling environment** (devcontainers, CI runners, one-off tool images). **This rule**
+governs containers shipped as a **product artifact** (published images, Compose stacks
+that deploy them). Do not treat the two as interchangeable Docker advice.
+
+Org principles and numeric gates: `docs/guardrails/docker/` (`DOCKER-*` IDs,
+`profile.thresholds.yml`). Reusable workflows: [pirlruc/containerdevops](https://github.com/pirlruc/containerdevops).
+
+## When editing a Dockerfile or image publish path
+
+1. Multi-stage; no build-only tooling in the final stage (`DOCKER-BUILD-001`).
+2. Minimal base; pin by **digest** with the tag in a comment (`DOCKER-BUILD-002/003`).
+3. Install from a committed lockfile; committed `.dockerignore`; no secrets in args/ENV/layers (`DOCKER-BUILD-004/005`).
+4. Non-root numeric UID; exec-form `ENTRYPOINT`; config via env (`DOCKER-RUN-001/004/005`).
+5. Document hardening (`--read-only`, `--cap-drop ALL`, `no-new-privileges`) and why there is or is not a `HEALTHCHECK` (`DOCKER-RUN-002/003/006`).
+6. OCI `org.opencontainers.image.*` labels (`DOCKER-DOC-001`).
+7. Lint with hadolint; structure-test; image vuln scan (Trivy/Grype) and SBOM (Syft) before publish (`DOCKER-LINT-001`, `DOCKER-TEST-001`, `DOCKER-SEC-001/002`).
+8. Version tags from the release; same digest to every registry; publish from a trusted trigger (`DOCKER-DELIV-001/002`).
+
+Signing (`DOCKER-SEC-003`) and provenance (`DOCKER-SEC-004`) are required. If the platform
+cannot meet them (e.g. private-repo attestation limits), record a deviation — do not
+silently skip.
+
+## Compose / IaC
+
+When editing `compose.yaml`, `compose.yml`, `docker-compose.yaml`, or an overlay:
+
+1. Validate with `docker compose config` and the Compose Spec schema (`DOCKER-LINT-003`).
+2. Scan with KICS; record exclusions in a tracked doc (`DOCKER-LINT-002`).
+3. Pin every service image by digest with the tag in a comment, including third-party images (`DOCKER-COMPOSE-001`).
+4. Declare `restart:` and `healthcheck:`; dependents use `condition: service_healthy` (`DOCKER-COMPOSE-002`).
+5. Named volumes for state; no anonymous volumes; bind mounts carry a why-comment (`DOCKER-COMPOSE-003`).
+6. Secrets via env files or the `secrets:` block; gitignore `.env`; commit `.env.example` (`DOCKER-COMPOSE-004`).
+7. `no-new-privileges` and capability drops. `privileged: true` exceeds `compose_privileged_services_max` and needs a recorded deviation (`DOCKER-COMPOSE-005`).
+8. Publish only needed ports, bound to an explicit interface (`compose_default_port_bind`, usually `127.0.0.1`) (`DOCKER-COMPOSE-006`).
+9. Memory limits on long-running services (`DOCKER-COMPOSE-007`).
+10. Document backup and restore for every stateful named volume (`DOCKER-COMPOSE-008`).
+
+Threshold numbers live in `docs/guardrails/docker/profile.thresholds.yml` — do not bake them into this rule.

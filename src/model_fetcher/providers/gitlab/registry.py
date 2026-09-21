@@ -126,11 +126,9 @@ class GitLabRegistryProvider(BaseRegistryProvider):
             AuthenticationError: If GitLab rejects the token.
             DownloadError: If the stream is incomplete or the checksum does not match.
         """
-        if coordinates.file_name and not force_download:
-            cached = self._lookup(coordinates, coordinates.file_name, None, target_dir)
-            if cached is not None:
-                logger.info("Using cached artifact %s", cached.local_path)
-                return cached
+        cached = self._cached_named_file(coordinates, target_dir, force_download=force_download)
+        if cached is not None:
+            return cached
 
         try:
             metadata = self.get_version_metadata(coordinates)
@@ -140,13 +138,98 @@ class GitLabRegistryProvider(BaseRegistryProvider):
 
             return self._download_generic(coordinates, target_dir=target_dir)
 
+        return self._download_selected(
+            coordinates,
+            metadata,
+            target_dir=target_dir,
+            force_download=force_download,
+        )
+
+    def _cached_named_file(
+        self,
+        coordinates: ModelCoordinates,
+        target_dir: Path | None,
+        *,
+        force_download: bool,
+    ) -> DownloadResult | None:
+        """Return a cached file when the caller already named it.
+
+        Args:
+            coordinates: Remote model identity.
+            target_dir: Optional directory that replaces the cache layout.
+            force_download: When true, skip the cache.
+
+        Returns:
+            The cached result, or ``None`` when the file must be resolved remotely.
+        """
+        if not coordinates.file_name or force_download:
+            return None
+
+        return self._cached_log(coordinates, coordinates.file_name, None, target_dir)
+
+    def _download_selected(
+        self,
+        coordinates: ModelCoordinates,
+        metadata: dict[str, Any],
+        *,
+        target_dir: Path | None,
+        force_download: bool,
+    ) -> DownloadResult:
+        """Download the file chosen from version metadata.
+
+        Args:
+            coordinates: Remote model identity.
+            metadata: Model version document.
+            target_dir: Optional directory that replaces the cache layout.
+            force_download: When true, fetch the bytes again.
+
+        Returns:
+            The verified local file.
+
+        Raises:
+            ModelNotFoundError: If the model-registry file is missing and no generic
+                file name was requested.
+            DownloadError: If the stream is incomplete or the checksum does not match.
+        """
         file_name, expected_sha = self._select_file(coordinates, metadata)
         if not force_download:
-            cached = self._lookup(coordinates, file_name, expected_sha, target_dir)
+            cached = self._cached_log(coordinates, file_name, expected_sha, target_dir)
             if cached is not None:
-                logger.info("Using cached artifact %s", cached.local_path)
                 return cached
 
+        return self._download_model_file(
+            coordinates,
+            metadata,
+            file_name,
+            expected_sha,
+            target_dir=target_dir,
+        )
+
+    def _download_model_file(
+        self,
+        coordinates: ModelCoordinates,
+        metadata: dict[str, Any],
+        file_name: str,
+        expected_sha: str | None,
+        *,
+        target_dir: Path | None,
+    ) -> DownloadResult:
+        """Stream the model-registry file, then the generic package on 404.
+
+        Args:
+            coordinates: Remote model identity.
+            metadata: Model version document containing the numeric ``id``.
+            file_name: File to download.
+            expected_sha: Digest to verify.
+            target_dir: Optional directory that replaces the cache layout.
+
+        Returns:
+            The verified local file.
+
+        Raises:
+            ModelNotFoundError: If the model-registry file is missing and no generic
+                file name was requested.
+        """
         version_id = quote(str(metadata["id"]), safe="")
         project = project_path(coordinates.project_id)
         model_path = (
@@ -170,6 +253,30 @@ class GitLabRegistryProvider(BaseRegistryProvider):
                 target_dir=target_dir,
                 expected_sha256=expected_sha,
             )
+
+    def _cached_log(
+        self,
+        coordinates: ModelCoordinates,
+        file_name: str,
+        expected_sha: str | None,
+        target_dir: Path | None,
+    ) -> DownloadResult | None:
+        """Return a cache hit and log it.
+
+        Args:
+            coordinates: Remote model identity.
+            file_name: Local file name.
+            expected_sha: Digest the cache must match.
+            target_dir: Optional directory that replaces the cache layout.
+
+        Returns:
+            The cached result, or ``None``.
+        """
+        cached = self._lookup(coordinates, file_name, expected_sha, target_dir)
+        if cached is not None:
+            logger.info("Using cached artifact %s", cached.local_path)
+
+        return cached
 
     def _select_file(
         self,
@@ -495,21 +602,26 @@ def _file_record(item: Any) -> tuple[str, str | None] | None:
     if not isinstance(item, dict):
         return None
 
-    file_name = ""
-    for key in _FILE_KEYS:
-        value = item.get(key)
-        if isinstance(value, str) and value:
-            file_name = value
-            break
-
-    if not file_name:
+    file_name = _first_text_field(item, _FILE_KEYS)
+    if file_name is None:
         return None
 
-    digest: str | None = None
-    for key in _SHA_KEYS:
+    return file_name, _first_text_field(item, _SHA_KEYS)
+
+
+def _first_text_field(item: dict[str, Any], keys: tuple[str, ...]) -> str | None:
+    """Return the first non-empty string among ``keys``.
+
+    Args:
+        item: JSON object.
+        keys: Field names in priority order.
+
+    Returns:
+        The field value, or ``None``.
+    """
+    for key in keys:
         value = item.get(key)
         if isinstance(value, str) and value:
-            digest = value
-            break
+            return value
 
-    return file_name, digest
+    return None

@@ -48,26 +48,62 @@ def _error_text(response: httpx.Response) -> str:
     Returns:
         A status line plus the GitLab ``message`` field when one is present.
     """
-    detail = ""
-    try:
-        payload = response.json()
-    except ValueError:
-        payload = None
-
-    if isinstance(payload, dict):
-        message = payload.get("message") or payload.get("error")
-        if isinstance(message, str):
-            detail = message
-        elif isinstance(message, list):
-            detail = "; ".join(str(item) for item in message)
-    elif isinstance(payload, str):
-        detail = payload
-
-    if not detail:
-        detail = response.reason_phrase or "request failed"
+    detail = _payload_message(response) or response.reason_phrase or "request failed"
 
     clipped = detail.replace("\n", " ")[:_ERROR_TEXT_LIMIT]
     return f"GitLab HTTP {response.status_code}: {clipped}"
+
+
+def _payload_message(response: httpx.Response) -> str:
+    """Return the GitLab message body, or an empty string.
+
+    Args:
+        response: HTTP response that failed.
+
+    Returns:
+        The ``message`` or ``error`` field, a JSON string, or ``""``.
+    """
+    payload = _json_body(response)
+    if isinstance(payload, dict):
+        return _message_text(payload.get("message") or payload.get("error"))
+
+    if isinstance(payload, str):
+        return payload
+
+    return ""
+
+
+def _json_body(response: httpx.Response) -> Any:
+    """Decode a response body, treating non-JSON as missing.
+
+    Args:
+        response: HTTP response.
+
+    Returns:
+        The decoded JSON value, or ``None``.
+    """
+    try:
+        return response.json()
+    except ValueError:
+        return None
+
+
+def _message_text(message: Any) -> str:
+    """Flatten a GitLab ``message`` field.
+
+    Args:
+        message: String, list, or another JSON value.
+
+    Returns:
+        A single line, or ``""`` when the value is not text.
+    """
+    if isinstance(message, str):
+        return message
+
+    if isinstance(message, list):
+        return "; ".join(str(item) for item in message)
+
+    return ""
 
 
 class GitLabHttp:

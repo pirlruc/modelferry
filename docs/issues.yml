@@ -1,7 +1,7 @@
 ---
 # Generated as the source of truth for epics and tasks.
 # Epic issues are the decision records. Do not add docs/adr markdown.
-# Methodology: https://github.com/pirlruc/methodologies/tree/main/github-issue-adr
+# Methodology: https://github.com/pirlruc/methodologies/tree/1.5.0/github-issue-adr
 repo: pirlruc/modelferry
 milestones:
   - name: Phase 1 — GitLab fetcher
@@ -173,3 +173,37 @@ milestones:
                 - tests/test_client.py
             verification:
               - uv run pytest tests/test_gitlab_flags.py tests/test_client.py
+      - id: GRD-001
+        status: open
+        title: Pin guardrails 1.6.0 and meet the Python complexity floors
+        decision: >-
+          In the context of checking model-fetcher against pirlruc/guardrails 1.6.0,
+          facing PY-CPLX-001 max cyclomatic complexity 8 while several parsers were
+          above that floor, we decided to split those functions and pin
+          docs/guardrails at tag 1.6.0 plus .github/scaffold at tag 1.5.0, to achieve
+          the org Python profile without lowering a gate, accepting that CI must
+          fetch the private submodules with GUARDRAILS_READ_TOKEN.
+        overview:
+          problem: The first commit approximated guardrails from a public scaffold.
+          goal: Measure and enforce the 1.6.0 Python complexity, coverage, and doc
+            floors.
+        architecture:
+          target: src/model_fetcher, scripts/check-python-complexity.py, .github/workflows
+          modules: [model_fetcher]
+        acceptance_criteria:
+          - docs/guardrails gitlink is tag 1.6.0.
+          - Radon max cyclomatic complexity is at most 8 and the average is at most
+            5.
+          - Statement and branch coverage are at least 95 percent.
+        tasks:
+          - id: GRD-001-T1
+            status: open
+            title: Split hot functions and wire the threshold checks
+            instructions:
+              files:
+                - src/model_fetcher/providers/gitlab/flag_eval.py
+                - scripts/check-python-complexity.py
+                - scripts/check-python-coverage.py
+            verification:
+              - uv run python scripts/check-python-complexity.py
+              - uv run python scripts/check-python-coverage.py

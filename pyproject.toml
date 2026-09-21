@@ -2,6 +2,16 @@
 build-backend = "setuptools.build_meta"
 requires = ["setuptools>=82.0.1", "wheel>=0.47.0"]
 
+[dependency-groups]
+dev = [
+  "interrogate>=1.7.0",
+  "pip-audit>=2.10.1",
+  "pydoclint>=0.9.1",
+  "pytest-cov>=7.1.0",
+  "pyyaml>=6.0.3",
+  "radon>=6.0.1",
+]
+
 [project]
 name = "model-fetcher"
 version = "0.1.0"
@@ -74,6 +84,15 @@ module = "tests.*"
 init_typed = true
 warn_required_dynamic_aliases = true
 warn_untyped_fields = true
+
+[tool.pydoclint]
+allow-init-docstring = true
+arg-type-hints-in-docstring = false
+check-class-attributes = false
+check-return-types = false
+check-yield-types = false
+skip-checking-raises = true
+style = "google"
 
 [tool.pylint.design]
 max-args = 10

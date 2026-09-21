@@ -1,0 +1,50 @@
+---
+description: Keep docs/ai-agent-handoff.md current across agent sessions
+alwaysApply: true
+---
+
+# AI agent handoff maintenance
+
+`docs/ai-agent-handoff.md` is the living handoff doc for the next agent. Treat it as part of session hygiene.
+
+## At session start
+
+When the task involves repo work (not pure Q&A), read `docs/ai-agent-handoff.md` before making changes.
+
+## At session end
+
+Before finishing, update `docs/ai-agent-handoff.md` if **any** of the following changed during the session:
+
+- Delivery phase status, reconciliation, or GitHub issue/milestone state
+- Verification commands, CI workflows, or quality gates
+- Toolchain pins, key paths, or module architecture
+- New pitfalls, workarounds, or agent conventions discovered
+- Suggested next work priorities
+
+Skip updates for read-only questions with no repo impact.
+
+## What to update (keep concise)
+
+| Section | Update when |
+|---------|-------------|
+| Delivery status table | Phase/epic marked done or reconciliation completed |
+| Commands / CI | New or changed build, test, or deploy commands |
+| Known pitfalls | New failure mode and fix |
+| Suggested next work | Priorities shift after completed work |
+| Recent history | Notable commits or branch context worth remembering |
+
+Do **not** duplicate full content from `docs/issues.yml` or `README.md` — link to them and keep only the snapshot an agent needs in the first two minutes.
+
+## Related docs
+
+When handoff status changes, also update `docs/issues.yml` when closing or reconciling phases.
+
+When guardrails are referenced, use [`docs/guardrails/`](https://github.com/pirlruc/guardrails) in the consuming repository — see [guardrails-compliance.mdc](guardrails-compliance.mdc).
+
+Issue methodology: [github-issue-adr.mdc](github-issue-adr.mdc) (Epic = decision record; applies to **new issues only**).
+
+When recording commits in **Recent history**, use [Conventional Commits](https://www.conventionalcommits.org/) — see [conventional-commits.mdc](conventional-commits.mdc).
+
+Record host-only gaps that cannot use a project-local env or Docker under known pitfalls — see [build-test-environments.mdc](build-test-environments.mdc).
+
+Refresh the footer line: `*Last updated: …*`.

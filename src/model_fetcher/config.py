@@ -58,11 +58,60 @@ def _resolve_token(explicit: str | None) -> tuple[str | None, TokenHeader]:
     private_token = os.environ.get("GITLAB_TOKEN") or None
     job_token = os.environ.get("CI_JOB_TOKEN") or None
     if explicit:
-        if job_token and explicit == job_token and explicit != private_token:
-            return explicit, "JOB-TOKEN"
+        return _explicit_token(explicit, private_token, job_token)
 
-        return explicit, "PRIVATE-TOKEN"
+    return _environment_token(private_token, job_token)
 
+
+def _explicit_token(
+    explicit: str,
+    private_token: str | None,
+    job_token: str | None,
+) -> tuple[str, TokenHeader]:
+    """Classify a constructor token.
+
+    Args:
+        explicit: Token passed by the caller.
+        private_token: ``GITLAB_TOKEN``, when set.
+        job_token: ``CI_JOB_TOKEN``, when set.
+
+    Returns:
+        The same token and the header that should carry it.
+    """
+    if _is_job_token(explicit, private_token, job_token):
+        return explicit, "JOB-TOKEN"
+
+    return explicit, "PRIVATE-TOKEN"
+
+
+def _is_job_token(explicit: str, private_token: str | None, job_token: str | None) -> bool:
+    """Return whether ``explicit`` is the CI job token and not the personal token.
+
+    Args:
+        explicit: Token passed by the caller.
+        private_token: ``GITLAB_TOKEN``, when set.
+        job_token: ``CI_JOB_TOKEN``, when set.
+
+    Returns:
+        True when the constructor value should be sent as ``JOB-TOKEN``.
+    """
+    return bool(job_token) and explicit == job_token and explicit != private_token
+
+
+def _environment_token(
+    private_token: str | None,
+    job_token: str | None,
+) -> tuple[str | None, TokenHeader]:
+    """Choose a token from the environment.
+
+    Args:
+        private_token: ``GITLAB_TOKEN``, when set.
+        job_token: ``CI_JOB_TOKEN``, when set.
+
+    Returns:
+        The preferred token and its header. The header is ``PRIVATE-TOKEN`` when
+        no token is configured.
+    """
     if private_token:
         return private_token, "PRIVATE-TOKEN"
 
@@ -76,7 +125,7 @@ def _first_env(*names: str) -> str | None:
     """Return the first non-empty environment variable.
 
     Args:
-        names: Environment variable names in priority order.
+        *names: Environment variable names in priority order.
 
     Returns:
         The first non-blank value, or ``None``.

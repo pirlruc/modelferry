@@ -1,0 +1,28 @@
+# Which repos to sync and what to bootstrap them with.
+#
+# Copy to docs/issues-sync-targets.yml. Only needed when driving several repos from one
+# checkout — a single repo works without this file, using docs/issues.yml and the repo
+# inferred from `git remote`.
+#
+# If this file exists with an empty or commented-out `targets:` list, scripts fall back
+# to the current repo. Never leave a live `repo:` entry that is not the consuming repo.
+#
+# Read by issues-sync-all.sh, issues-resync-all.sh, and setup-issue-scaffold.sh.
+#
+# `yaml` paths are relative to the directory holding this file's repo root, so they stay
+# valid regardless of where the checkout lives.
+
+# targets:
+#   - repo: owner/example
+#     yaml: docs/issues.yml
+
+labels:
+  - { name: epic, color: "5319E7", description: "Decision record" }
+  - { name: task, color: "0E8A16", description: "Unit of work under an epic" }
+  - { name: ai-architect, color: "7057FF", description: "Architecture or planning" }
+  - { name: ai-implementer, color: "1D76DB", description: "Implementation" }
+  - { name: ai-reviewer, color: "ededed", description: "Review or triage" }
+
+milestones:
+  - name: Phase 1 — GitLab fetcher
+    description: GitLab download and feature-flag resolution
