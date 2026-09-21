@@ -13,7 +13,7 @@ from model_fetcher.cache import CacheManager, normalize_sha256
 from model_fetcher.config import FetcherConfig
 from model_fetcher.exceptions import DownloadError, ModelNotFoundError
 from model_fetcher.models import DownloadResult, ModelCoordinates
-from model_fetcher.providers.gitlab.http import GitLabHttp, project_path
+from model_fetcher.providers.gitlab.http import GitLabHttp, _checksum_header, project_path
 
 logger = logging.getLogger(__name__)
 
@@ -67,9 +67,6 @@ class GitLabRegistryProvider(BaseRegistryProvider):
             AuthenticationError: If GitLab rejects the token.
             DownloadError: If the response is not a version document.
         """
-        if coordinates.version.startswith("candidate:"):
-            return {"id": coordinates.version, "version": coordinates.version}
-
         project = project_path(coordinates.project_id)
         direct_path = (
             f"/api/v4/projects/{project}/ml/models/"
@@ -443,7 +440,7 @@ class GitLabRegistryProvider(BaseRegistryProvider):
                 raise ModelNotFoundError(f"Artifact {file_name!r} was not found at {path}")
 
             expected_size = _content_length(response)
-            header_sha = response.headers.get("x-checksum-sha256")
+            header_sha = _checksum_header(response, self._config.base_url)
             digest = expected_sha256 or header_sha
             return self._cache.write_atomic(
                 destination,

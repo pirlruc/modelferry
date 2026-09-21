@@ -116,9 +116,10 @@ class ModelFetcher:
 
         registry_cls, flag_cls = pair
         self._owns_client = client is None
+        # GitLabHttp follows redirects itself and strips tokens on cross-origin hops.
         self._client = client or httpx.Client(
             timeout=httpx.Timeout(timeout),
-            follow_redirects=True,
+            follow_redirects=False,
         )
         self.cache = CacheManager(self.config.cache_dir)
         self.registry = registry_cls(self.config, self.cache, self._client)

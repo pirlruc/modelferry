@@ -173,6 +173,8 @@ def test_unleash_without_private_token(tmp_path: Path) -> None:
         ) as fetcher,
     ):
         resolution = fetcher.get_feature_flag(42, "model_route", context={"environment": "qa"})
+        with pytest.raises(FeatureFlagError, match="header value"):
+            fetcher.get_feature_flag(42, "model_route", context={"environment": "qa\r\nX: 1"})
 
     assert resolution.resolved_model is not None
     assert resolution.resolved_model.version == "v9"

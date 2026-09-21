@@ -49,9 +49,27 @@ def _unleash_app_name(config: FetcherConfig, environment: Any) -> str:
         The environment name, or the configured app name.
     """
     if isinstance(environment, str) and environment:
-        return environment
+        return _header_environment(environment)
 
     return config.unleash_app_name
+
+
+def _header_environment(environment: str) -> str:
+    """Return an environment name that is safe to send as ``UNLEASH-APPNAME``.
+
+    Args:
+        environment: Caller-supplied environment.
+
+    Returns:
+        The same environment name.
+
+    Raises:
+        FeatureFlagError: If the name contains a control character.
+    """
+    if any(ord(char) < 32 or ord(char) == 127 for char in environment):
+        raise FeatureFlagError("Feature-flag environment is not a valid header value")
+
+    return environment
 
 
 def _named_feature(payload: Any, flag_name: str) -> dict[str, Any] | None:

@@ -1,6 +1,6 @@
 #!/bin/sh
 # Fetch the pinned private submodules at their gitlink SHAs (CI-021, CI-025).
-# The token is used only on the fetch URL and is not stored as a remote.
+# The token is sent as an Authorization header and is not stored as a remote.
 set -eu
 
 token="${GUARDRAILS_READ_TOKEN:-}"
@@ -21,10 +21,13 @@ checkout_one() {
   rm -rf "${path}"
   mkdir -p "${path}"
   git -C "${path}" init --quiet
-  git config --global --add safe.directory "${root}/${path}"
-  git -C "${path}" fetch --depth 1 \
-    "https://x-access-token:${token}@github.com/${repo}.git" \
-    "${sha}"
+  git -C "${path}" config safe.directory "${root}/${path}"
+  # The token stays in the git process environment, not the remote URL or argv.
+  auth="$(printf 'x-access-token:%s' "${token}" | base64 | tr -d '\n')"
+  GIT_CONFIG_COUNT=1 \
+    GIT_CONFIG_KEY_0=http.extraheader \
+    GIT_CONFIG_VALUE_0="AUTHORIZATION: basic ${auth}" \
+    git -C "${path}" fetch --depth 1 "https://github.com/${repo}.git" "${sha}"
   git -C "${path}" checkout --detach FETCH_HEAD
   git -C "${path}" remote add origin "https://github.com/${repo}.git"
 }

@@ -3,6 +3,7 @@
 import os
 from pathlib import Path
 from typing import Literal, Self
+from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -38,6 +39,10 @@ def _clean_url(value: str) -> str:
 
     if not text.startswith(("https://", "http://")):
         raise ValueError("base_url must start with http:// or https://")
+
+    parts = urlsplit(text)
+    if parts.username or parts.password:
+        raise ValueError("base_url must not include credentials")
 
     return text
 
@@ -121,6 +126,25 @@ def _environment_token(
     return None, "PRIVATE-TOKEN"
 
 
+def _reject_controls(value: str, label: str) -> str:
+    """Reject CR, LF, and other control characters in an HTTP header value.
+
+    Args:
+        value: Candidate header value.
+        label: Field name used in the error.
+
+    Returns:
+        ``value`` when every character is printable.
+
+    Raises:
+        ValueError: If ``value`` contains a character below ASCII 32 or DEL.
+    """
+    if any(ord(char) < 32 or ord(char) == 127 for char in value):
+        raise ValueError(f"{label} must not contain control characters")
+
+    return value
+
+
 def _first_env(*names: str) -> str | None:
     """Return the first non-empty environment variable.
 
@@ -182,6 +206,41 @@ class FetcherConfig(BaseModel):
             raise ValueError("provider must not be empty")
 
         return text
+
+    @field_validator("token", "unleash_instance_id")
+    @classmethod
+    def _optional_header_value(cls, value: str | None) -> str | None:
+        """Reject control characters in values that are copied into HTTP headers.
+
+        Args:
+            value: Token or Unleash instance id.
+
+        Returns:
+            The original value when it is safe to send as a header.
+
+        Raises:
+            ValueError: If the value contains a control character.
+        """
+        if value is None:
+            return None
+
+        return _reject_controls(value, "header value")
+
+    @field_validator("unleash_app_name")
+    @classmethod
+    def _app_name_header_value(cls, value: str) -> str:
+        """Reject control characters in the Unleash app name.
+
+        Args:
+            value: Unleash application or environment name.
+
+        Returns:
+            The original app name.
+
+        Raises:
+            ValueError: If the name contains a control character.
+        """
+        return _reject_controls(value, "unleash_app_name")
 
     @field_validator("base_url")
     @classmethod

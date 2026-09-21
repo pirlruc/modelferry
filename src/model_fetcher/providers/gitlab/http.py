@@ -11,7 +11,19 @@ from model_fetcher.config import FetcherConfig
 from model_fetcher.exceptions import AuthenticationError, DownloadError
 
 _MAX_PAGES = 20
+_MAX_REDIRECTS = 20
 _ERROR_TEXT_LIMIT = 300
+_PAGE_HEADER_LIMIT = 6
+_REDIRECT_STATUSES = frozenset({301, 302, 303, 307, 308})
+_CREDENTIAL_HEADERS = frozenset(
+    {
+        "private-token",
+        "job-token",
+        "authorization",
+        "unleash-instanceid",
+        "unleash-appname",
+    },
+)
 
 
 def project_path(project_id: str) -> str:
@@ -86,6 +98,254 @@ def _json_body(response: httpx.Response) -> Any:
         return response.json()
     except ValueError:
         return None
+
+
+def _checksum_header(response: httpx.Response, base_url: str) -> str | None:
+    """Return ``x-checksum-sha256`` only when the body came from the GitLab origin.
+
+    Object-storage redirects are followed, but a checksum header from another host is
+    not a GitLab digest and is ignored.
+
+    Args:
+        response: Final download response, after redirects.
+        base_url: Configured GitLab origin.
+
+    Returns:
+        The header value, or ``None`` when the response host is not GitLab.
+    """
+    if not _retains_credentials(httpx.URL(base_url), response.url):
+        return None
+
+    value = response.headers.get("x-checksum-sha256")
+    if not isinstance(value, str) or not value:
+        return None
+
+    return value
+
+
+def _follow_redirects(
+    client: httpx.Client,
+    url: httpx.URL,
+    *,
+    headers: dict[str, str],
+    params: dict[str, Any] | None,
+    stream: bool,
+) -> httpx.Response:
+    """GET ``url``, dropping GitLab credentials when a redirect leaves the origin.
+
+    Args:
+        client: Shared HTTP client. Redirects are handled here, not by the client.
+        url: Absolute GitLab URL.
+        headers: Request headers, including the access token when one is configured.
+        params: Query string for the first request only.
+        stream: When true, the final response body is left unread.
+
+    Returns:
+        The final response. Redirect hops are closed before it is returned.
+
+    Raises:
+        DownloadError: If a redirect has no usable ``Location`` or the hop limit is hit.
+        httpx.HTTPError: If the transport fails. Callers map that to ``DownloadError``.
+    """
+    current = url
+    current_headers = dict(headers)
+    current_params = params
+    for _hop in range(_MAX_REDIRECTS):
+        response = _transmit(client, current, current_headers, current_params, stream=stream)
+        if response.status_code not in _REDIRECT_STATUSES:
+            return response
+
+        current, current_headers = _advance_redirect(response, current, current_headers)
+        current_params = None
+
+    raise DownloadError("GitLab redirect limit exceeded")
+
+
+def _transmit(
+    client: httpx.Client,
+    url: httpx.URL,
+    headers: dict[str, str],
+    params: dict[str, Any] | None,
+    *,
+    stream: bool,
+) -> httpx.Response:
+    """Send one GET without letting the client follow redirects itself.
+
+    Args:
+        client: Shared HTTP client.
+        url: Request URL.
+        headers: Request headers.
+        params: Optional query string.
+        stream: When true, leave the body unread.
+
+    Returns:
+        The raw response.
+    """
+    request = client.build_request("GET", url, params=params, headers=headers)
+    return client.send(request, stream=stream, follow_redirects=False)
+
+
+def _advance_redirect(
+    response: httpx.Response,
+    current: httpx.URL,
+    headers: dict[str, str],
+) -> tuple[httpx.URL, dict[str, str]]:
+    """Close a redirect response and return the next URL and headers.
+
+    Args:
+        response: Redirect response. It is read and closed.
+        current: URL that produced ``response``.
+        headers: Headers used for ``current``.
+
+    Returns:
+        The next URL and the headers that may be sent there.
+
+    Raises:
+        DownloadError: If ``Location`` is missing or uses a scheme other than HTTP(S).
+    """
+    location = response.headers.get("location")
+    try:
+        response.read()
+    finally:
+        response.close()
+
+    if not location:
+        raise DownloadError("GitLab redirect did not include a Location header")
+
+    target = _redirect_target(current, location)
+    if _retains_credentials(current, target):
+        return target, headers
+
+    return target, _without_credentials(headers)
+
+
+def _redirect_target(current: httpx.URL, location: str) -> httpx.URL:
+    """Resolve a redirect location against ``current``.
+
+    Args:
+        current: URL that returned the redirect.
+        location: ``Location`` header value.
+
+    Returns:
+        An absolute HTTP or HTTPS URL.
+
+    Raises:
+        DownloadError: If the target scheme is not HTTP or HTTPS.
+    """
+    target = current.join(location.strip())
+    if target.scheme not in {"http", "https"}:
+        raise DownloadError("Refusing a GitLab redirect that is not HTTP(S)")
+
+    return target
+
+
+def _retains_credentials(current: httpx.URL, target: httpx.URL) -> bool:
+    """Return whether GitLab credentials may be sent to ``target``.
+
+    Args:
+        current: URL that returned the redirect.
+        target: Redirect destination.
+
+    Returns:
+        True for the same origin and for an HTTP to HTTPS upgrade of that host.
+    """
+    if _same_origin(current, target):
+        return True
+
+    return _is_https_upgrade(current, target)
+
+
+def _same_origin(url: httpx.URL, other: httpx.URL) -> bool:
+    """Return whether two URLs share scheme, host, and port.
+
+    Args:
+        url: First URL.
+        other: Second URL.
+
+    Returns:
+        True when both URLs are the same origin.
+    """
+    return (
+        url.scheme == other.scheme
+        and url.host == other.host
+        and _port_or_default(url) == _port_or_default(other)
+    )
+
+
+def _is_https_upgrade(url: httpx.URL, other: httpx.URL) -> bool:
+    """Return whether ``other`` is the HTTPS upgrade of ``url``.
+
+    Args:
+        url: Request URL.
+        other: Redirect destination.
+
+    Returns:
+        True for ``http`` port 80 to ``https`` port 443 on the same host.
+    """
+    if url.host != other.host:
+        return False
+
+    return (
+        url.scheme == "http"
+        and _port_or_default(url) == 80
+        and other.scheme == "https"
+        and _port_or_default(other) == 443
+    )
+
+
+def _port_or_default(url: httpx.URL) -> int | None:
+    """Return the explicit port or the default for the scheme.
+
+    Args:
+        url: URL whose port is needed.
+
+    Returns:
+        The port number, or ``None`` when the scheme has no default.
+    """
+    if url.port is not None:
+        return url.port
+
+    if url.scheme == "http":
+        return 80
+
+    if url.scheme == "https":
+        return 443
+
+    return None
+
+
+def _without_credentials(headers: dict[str, str]) -> dict[str, str]:
+    """Drop GitLab and Unleash credentials from redirect headers.
+
+    Args:
+        headers: Headers that were sent to the previous hop.
+
+    Returns:
+        The same mapping without token or Unleash identity headers.
+    """
+    return {key: value for key, value in headers.items() if key.lower() not in _CREDENTIAL_HEADERS}
+
+
+def _next_page(header: str) -> int:
+    """Parse a GitLab ``x-next-page`` header.
+
+    Args:
+        header: Header value with surrounding whitespace already removed.
+
+    Returns:
+        The next page number.
+
+    Raises:
+        DownloadError: If the value is not a small positive integer.
+    """
+    if len(header) > _PAGE_HEADER_LIMIT or not header.isdigit():
+        raise DownloadError(f"GitLab returned an invalid x-next-page value: {header!r}")
+
+    page = int(header)
+    if page < 1:
+        raise DownloadError(f"GitLab returned an invalid x-next-page value: {header!r}")
+
+    return page
 
 
 def _message_text(message: Any) -> str:
@@ -191,11 +451,12 @@ class GitLabHttp:
 
         Raises:
             AuthenticationError: On HTTP 401 or 403.
-            DownloadError: On transport failures, other HTTP errors, or a non-list body.
+            DownloadError: On transport failures, other HTTP errors, a non-list body,
+                an invalid ``x-next-page`` header, or more than 20 pages.
         """
         collected: list[Any] = []
         page = 1
-        while page <= _MAX_PAGES:
+        for _ in range(_MAX_PAGES):
             query: dict[str, Any] = dict(params or {})
             query["per_page"] = 100
             query["page"] = page
@@ -213,9 +474,9 @@ class GitLabHttp:
             if not next_page:
                 return collected
 
-            page = int(next_page)
+            page = _next_page(next_page)
 
-        return collected
+        raise DownloadError(f"GitLab pagination exceeded {_MAX_PAGES} pages for {path}")
 
     @contextmanager
     def open_download(self, path: str) -> Iterator[httpx.Response]:
@@ -232,26 +493,23 @@ class GitLabHttp:
             AuthenticationError: On HTTP 401 or 403.
             DownloadError: On transport failures or HTTP statuses other than 200 and 404.
         """
-        url = _gitlab_url(self._config.base_url, path)
+        response = self._send(path, stream=True, accept="application/octet-stream")
         try:
-            with self._client.stream(
-                "GET",
-                url,
-                headers=self.headers("application/octet-stream"),
-            ) as response:
-                if response.status_code in {401, 403}:
-                    response.read()
-                    raise AuthenticationError(_error_text(response))
+            if response.status_code in {401, 403}:
+                response.read()
+                raise AuthenticationError(_error_text(response))
 
-                if response.status_code == 404:
-                    response.read()
-                elif response.status_code >= 400:
-                    response.read()
-                    raise DownloadError(_error_text(response))
+            if response.status_code == 404:
+                response.read()
+            elif response.status_code >= 400:
+                response.read()
+                raise DownloadError(_error_text(response))
 
-                yield response
+            yield response
         except httpx.HTTPError as exc:
             raise DownloadError(f"GitLab download failed for {path}: {exc}") from exc
+        finally:
+            response.close()
 
     def _send(
         self,
@@ -260,14 +518,22 @@ class GitLabHttp:
         params: dict[str, Any] | None = None,
         extra_headers: dict[str, str] | None = None,
         require_token: bool = True,
+        stream: bool = False,
+        accept: str = "application/json",
     ) -> httpx.Response:
         """Send one GET and map transport errors.
+
+        Redirects are followed here. GitLab credentials are removed when the next hop
+        is a different origin, so a package redirect cannot leak ``PRIVATE-TOKEN`` or
+        ``JOB-TOKEN`` to object storage.
 
         Args:
             path: Absolute API path.
             params: Optional query string.
             extra_headers: Headers merged over the authentication headers.
             require_token: When false, a missing access token is allowed.
+            stream: When true, leave the final body unread.
+            accept: Value of the ``Accept`` header.
 
         Returns:
             The raw response. HTTP status is not yet classified beyond transport.
@@ -275,15 +541,22 @@ class GitLabHttp:
         Raises:
             AuthenticationError: When a token is required and missing. Status codes
                 are left to the caller via :meth:`_raise_for_status` after a 404 check.
-            DownloadError: When httpx cannot complete the request.
+            DownloadError: When httpx cannot complete the request, or a redirect is
+                refused.
         """
-        headers = self.headers("application/json", require_token=require_token)
+        headers = self.headers(accept, require_token=require_token)
         if extra_headers:
             headers.update(extra_headers)
 
         url = _gitlab_url(self._config.base_url, path)
         try:
-            return self._client.get(url, params=params, headers=headers)
+            return _follow_redirects(
+                self._client,
+                url,
+                headers=headers,
+                params=params,
+                stream=stream,
+            )
         except httpx.HTTPError as exc:
             raise DownloadError(f"GitLab request failed for {path}: {exc}") from exc
 

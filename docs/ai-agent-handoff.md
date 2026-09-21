@@ -25,7 +25,7 @@ Issue methodology:
 
 | Item                                             | State                                              |
 | ------------------------------------------------ | -------------------------------------------------- |
-| Package `model-fetcher` / import `model_fetcher` | Implemented on `cursor/model-fetcher-library-a7b4` |
+| Package `model-fetcher` / import `model_fetcher` | Implemented; Phase 1 epics marked done |
 | GitLab registry + generic package download       | Implemented                                        |
 | GitLab Unleash and REST flag resolution          | Implemented                                        |
 | Live GitHub epic issues                          | Not opened (CLI is read-only in this environment)  |
@@ -66,6 +66,30 @@ uv build
 ______________________________________________________________________
 
 ## Log entries (newest first)
+
+### 2026-09-21 (UTC) — Final review: redirects, pagination, header safety
+
+**Trigger:** Final pass for bugs, design flaws, performance, and security. Merge the pull
+request, update the issues, and delete the branch if nothing remains.
+
+**Actions:** Stopped forwarding `PRIVATE-TOKEN`, `JOB-TOKEN`, and Unleash headers on
+cross-origin redirects, and ignored `x-checksum-sha256` from those hosts. Pagination now stops
+after 20 pages instead of looping when `x-next-page` does not advance, and a non-numeric page
+header is a download error. Rejected control characters in header values and credentials embedded
+in `base_url`. Removed the `candidate:` version shortcut that skipped registry lookup. The
+submodule fetch script sends the read token as an Authorization header instead of putting it in
+the remote URL. The PyPI workflow passes the release tag through the environment. Marked the
+Phase 1 epics and tasks done in `docs/issues.yml`.
+
+**Outcome:** 53 tests pass. Pylint remains 10/10. Complexity stays within the 1.6.0 floors
+(max cyclomatic complexity 8, minimum maintainability index about 41.6). A non-unique cache temp
+name remains the accepted CACHE-001 tradeoff. Downloads still have no size cap, because model
+artifacts are expected to be large.
+
+**Follow-ups:**
+
+- CI stays red until `GUARDRAILS_READ_TOKEN` can read the private submodules.
+- Configure PyPI Trusted Publishing before the first annotated tag.
 
 ### 2026-09-21 (UTC) — Guardrails 1.6.0 complexity floors
 

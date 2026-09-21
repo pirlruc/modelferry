@@ -42,9 +42,15 @@ def test_server_url_and_unleash_environment(monkeypatch: pytest.MonkeyPatch) -> 
 
 
 def test_invalid_configuration_is_a_library_error() -> None:
-    """Bad URLs and timeouts surface as ModelFetcherError."""
+    """Bad URLs, embedded credentials, control characters, and timeouts are rejected."""
     with pytest.raises(ModelFetcherError):
         ModelFetcher(base_url="ftp://gitlab.example.com", token="test-token")
+
+    with pytest.raises(ModelFetcherError):
+        ModelFetcher(base_url="https://user:secret@gitlab.example.com", token="test-token")
+
+    with pytest.raises(ModelFetcherError):
+        ModelFetcher(token="test-token\r\nX-Injected: 1")
 
     with pytest.raises(ModelFetcherError):
         ModelFetcher(token="test-token", timeout=0)

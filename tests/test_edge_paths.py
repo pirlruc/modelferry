@@ -241,18 +241,18 @@ def test_registry_http_failures(tmp_path: Path) -> None:
         fetcher.download_model(42, "fraud", "v1", file_name="model.onnx")
 
 
-def test_candidate_version_and_target_directory(tmp_path: Path) -> None:
-    """A candidate id skips name lookup and target_dir skips the cache tree."""
+def test_target_directory_skips_the_cache_tree(tmp_path: Path) -> None:
+    """target_dir places the file directly and ignores a non-numeric content length."""
     mock = GitLabMock()
-    path = "/api/v4/projects/42/packages/ml_models/candidate%3A9/files/model.onnx"
-    mock.add("GET", path, content=_PAYLOAD, headers={"content-length": "nope"})
+    mock.add("GET", _VERSION, json_body={"id": 7, "version": "v1"})
+    mock.add("GET", _FILE, content=_PAYLOAD, headers={"content-length": "nope"})
     client, fetcher = _fetcher(mock, tmp_path)
     target = tmp_path / "out"
     with client, fetcher:
         saved = fetcher.download_model(
             42,
             "fraud",
-            "candidate:9",
+            "v1",
             file_name="model.onnx",
             target_dir=target,
         )
@@ -408,27 +408,55 @@ def test_flag_parsers_cover_remaining_shapes() -> None:
     assert user == (False, None)
 
 
-def test_remaining_registry_and_http_branches(tmp_path: Path) -> None:
-    """Cover pagination limits, generic fallback, and error-body shapes."""
+def test_pagination_limits_and_generic_fallback(tmp_path: Path) -> None:
+    """A repeating next-page header fails, and a short list still falls back."""
     pages = GitLabMock()
     pages.add("GET", _VERSION, status=404, json_body={"message": ["missing", {"id": 1}]})
     for index in range(_MAX_PAGES):
         body: list[dict[str, object]] = [{"id": 3, "name": "fraud"}] if index == 0 else []
         pages.push("GET", _MODELS, json_body=body, headers={"x-next-page": str(index + 2)})
 
-    pages.add(
+    client, fetcher = _fetcher(pages, tmp_path)
+    with client, fetcher, pytest.raises(DownloadError, match="pagination exceeded"):
+        fetcher.download_model(42, "fraud", "v1", file_name="model.onnx")
+
+    invalid_page = GitLabMock()
+    invalid_page.add("GET", _VERSION, status=404)
+    invalid_page.add("GET", _MODELS, json_body=[], headers={"x-next-page": "next"})
+    client, fetcher = _fetcher(invalid_page, tmp_path / "invalid-page")
+    with client, fetcher, pytest.raises(DownloadError, match="x-next-page"):
+        fetcher.download_model(42, "fraud", "v1", file_name="model.onnx")
+
+    zero_page = GitLabMock()
+    zero_page.add("GET", _VERSION, status=404)
+    zero_page.add("GET", _MODELS, json_body=[], headers={"x-next-page": "0"})
+    client, fetcher = _fetcher(zero_page, tmp_path / "zero-page")
+    with client, fetcher, pytest.raises(DownloadError, match="x-next-page"):
+        fetcher.download_model(42, "fraud", "v1", file_name="model.onnx")
+
+    fallback = GitLabMock()
+    fallback.add("GET", _VERSION, status=404, json_body={"message": ["missing", {"id": 1}]})
+    fallback.add("GET", _MODELS, json_body=[{"id": 3, "name": "fraud"}])
+    fallback.add(
         "GET",
         "/api/v4/projects/42/ml/models/3/versions",
         json_body=[{"version": "v1"}, {"id": 7, "version": "v1"}],
     )
-    pages.add("GET", _FILE, status=404, json_body={"error": {"nested": True}})
-    pages.add("GET", "/api/v4/projects/42/packages/generic/fraud/v1/model.onnx", content=_PAYLOAD)
-    client, fetcher = _fetcher(pages, tmp_path)
+    fallback.add("GET", _FILE, status=404, json_body={"error": {"nested": True}})
+    fallback.add(
+        "GET",
+        "/api/v4/projects/42/packages/generic/fraud/v1/model.onnx",
+        content=_PAYLOAD,
+    )
+    client, fetcher = _fetcher(fallback, tmp_path / "fallback")
     with client, fetcher:
         saved = fetcher.download_model(42, "fraud", "v1", file_name="model.onnx")
 
     assert saved.read_bytes() == _PAYLOAD
 
+
+def test_remaining_registry_and_http_branches(tmp_path: Path) -> None:
+    """Cover error-body shapes that the happy path does not hit."""
     absent = GitLabMock()
     absent.add("GET", _VERSION, status=404, content=b"not-json")
     absent.add("GET", _MODELS, json_body=[{"id": 3, "name": "other"}])

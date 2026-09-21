@@ -5,10 +5,10 @@
 repo: pirlruc/modelferry
 milestones:
   - name: Phase 1 — GitLab fetcher
-    status: open
+    status: done
     epics:
       - id: PKG-001
-        status: open
+        status: done
         title: Python scaffold and uv packaging
         decision: >-
           In the context of publishing model-fetcher from pirlruc/modelferry, facing
@@ -33,13 +33,13 @@ milestones:
             build.
         tasks:
           - id: PKG-001-T1
-            status: open
+            status: done
             title: Add the src layout, lockfile, and CI workflows
             instructions:
               files: [pyproject.toml, .github/workflows/ci.yml]
             verification: [uv lock --check, uv build]
       - id: ARCH-001
-        status: open
+        status: done
         title: Provider facade for registry download and flag resolution
         decision: >-
           In the context of fetching models from more than one Git host, facing a
@@ -66,7 +66,7 @@ milestones:
           - Loading or executing model bytes.
         tasks:
           - id: ARCH-001-T1
-            status: open
+            status: done
             title: Implement ModelFetcher and the provider contracts
             instructions:
               files:
@@ -75,7 +75,7 @@ milestones:
                 - src/model_fetcher/models.py
             verification: [uv run pytest tests/test_client.py]
       - id: CACHE-001
-        status: open
+        status: done
         title: Atomic cache and SHA-256 verification
         decision: >-
           In the context of interrupted downloads, facing partial files being treated
@@ -98,13 +98,13 @@ milestones:
           - A digest mismatch deletes the partial file.
         tasks:
           - id: CACHE-001-T1
-            status: open
+            status: done
             title: Implement CacheManager
             instructions:
               files: [src/model_fetcher/cache.py, tests/test_cache.py]
             verification: [uv run pytest tests/test_cache.py]
       - id: GLREG-001
-        status: open
+        status: done
         title: GitLab model registry and generic package download
         decision: >-
           In the context of GitLab model artifacts, facing two storage APIs, we decided
@@ -130,7 +130,7 @@ milestones:
           - A checksum mismatch raises DownloadError and writes no final file.
         tasks:
           - id: GLREG-001-T1
-            status: open
+            status: done
             title: Implement GitLabRegistryProvider
             instructions:
               files:
@@ -138,7 +138,7 @@ milestones:
                 - tests/test_gitlab_registry.py
             verification: [uv run pytest tests/test_gitlab_registry.py]
       - id: GLFLG-001
-        status: open
+        status: done
         title: GitLab feature-flag coordinate resolution
         decision: >-
           In the context of choosing a model version at runtime, facing Unleash client
@@ -164,7 +164,7 @@ milestones:
           - user_id and environment context can reject a strategy.
         tasks:
           - id: GLFLG-001-T1
-            status: open
+            status: done
             title: Implement GitLabFlagProvider
             instructions:
               files:
@@ -174,7 +174,7 @@ milestones:
             verification:
               - uv run pytest tests/test_gitlab_flags.py tests/test_client.py
       - id: GRD-001
-        status: open
+        status: done
         title: Pin guardrails 1.6.0 and meet the Python complexity floors
         decision: >-
           In the context of checking model-fetcher against pirlruc/guardrails 1.6.0,
@@ -197,7 +197,7 @@ milestones:
           - Statement and branch coverage are at least 95 percent.
         tasks:
           - id: GRD-001-T1
-            status: open
+            status: done
             title: Split hot functions and wire the threshold checks
             instructions:
               files:

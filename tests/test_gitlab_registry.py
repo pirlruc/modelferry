@@ -174,6 +174,98 @@ def test_job_token_header(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> No
     assert mock.header(0, "private-token") is None
 
 
+def test_cross_origin_redirect_drops_credentials_and_checksum(tmp_path: Path) -> None:
+    """Object-storage redirects must not receive the GitLab token or its checksum."""
+    mock = GitLabMock()
+    mock.add(
+        "GET",
+        _VERSION,
+        json_body={"id": 7, "version": "v1", "files": [{"file_name": "model.onnx"}]},
+    )
+    mock.add(
+        "GET",
+        _FILE,
+        status=302,
+        headers={"location": "https://storage.example/objects/model.onnx"},
+    )
+    mock.add(
+        "GET",
+        "/objects/model.onnx",
+        content=_PAYLOAD,
+        headers={"x-checksum-sha256": "ab" * 32},
+    )
+    client, fetcher = _fetcher(mock, tmp_path)
+    with client, fetcher:
+        path = fetcher.download_model(42, "fraud", "v1", file_name="model.onnx")
+
+    assert path.read_bytes() == _PAYLOAD
+    storage = [call for call in mock.calls if call.url.host == "storage.example"]
+    assert len(storage) == 1
+    assert storage[0].headers.get("private-token") is None
+    gitlab = [call for call in mock.calls if call.url.host == "gitlab.com"]
+    assert gitlab[-1].headers.get("private-token") == "test-token"
+
+
+def test_same_origin_and_https_upgrade_keep_credentials(tmp_path: Path) -> None:
+    """Redirects that stay on the GitLab host still send the token."""
+    mock = GitLabMock()
+    mock.add("GET", _VERSION, json_body=_version_document())
+    mock.add("GET", _FILE, status=302, headers={"location": "/api/v4/projects/42/files/final.onnx"})
+    mock.add("GET", "/api/v4/projects/42/files/final.onnx", content=_PAYLOAD)
+    client, fetcher = _fetcher(mock, tmp_path)
+    with client, fetcher:
+        fetcher.download_model(42, "fraud", "v1", file_name="model.onnx")
+
+    assert mock.header(2, "private-token") == "test-token"
+
+    upgraded = GitLabMock()
+    upgraded.add("GET", _VERSION, json_body=_version_document())
+    upgraded.add(
+        "GET",
+        _FILE,
+        status=302,
+        headers={"location": "https://gitlab.test/api/v4/projects/42/files/final.onnx"},
+    )
+    upgraded.add("GET", "/api/v4/projects/42/files/final.onnx", content=_PAYLOAD)
+    client = upgraded.client()
+    with (
+        client,
+        ModelFetcher(
+            base_url="http://gitlab.test",
+            token="test-token",
+            cache_dir=tmp_path / "upgrade",
+            client=client,
+        ) as fetcher,
+    ):
+        fetcher.download_model(42, "fraud", "v1", file_name="model.onnx")
+
+    assert upgraded.header(2, "private-token") == "test-token"
+
+
+def test_refuses_unsafe_or_endless_redirects(tmp_path: Path) -> None:
+    """Non-HTTP locations, missing locations, and redirect loops fail closed."""
+    file_url = GitLabMock()
+    file_url.add("GET", _VERSION, json_body=_version_document())
+    file_url.add("GET", _FILE, status=302, headers={"location": "file:///etc/passwd"})
+    client, fetcher = _fetcher(file_url, tmp_path / "file-url")
+    with client, fetcher, pytest.raises(DownloadError, match="not HTTP"):
+        fetcher.download_model(42, "fraud", "v1", file_name="model.onnx")
+
+    missing = GitLabMock()
+    missing.add("GET", _VERSION, json_body=_version_document())
+    missing.add("GET", _FILE, status=302)
+    client, fetcher = _fetcher(missing, tmp_path / "missing-location")
+    with client, fetcher, pytest.raises(DownloadError, match="Location"):
+        fetcher.download_model(42, "fraud", "v1", file_name="model.onnx")
+
+    loop = GitLabMock()
+    loop.add("GET", _VERSION, json_body=_version_document())
+    loop.add("GET", _FILE, status=302, headers={"location": "https://gitlab.com" + _FILE})
+    client, fetcher = _fetcher(loop, tmp_path / "loop")
+    with client, fetcher, pytest.raises(DownloadError, match="redirect limit"):
+        fetcher.download_model(42, "fraud", "v1", file_name="model.onnx")
+
+
 def test_missing_token_is_an_authentication_error(tmp_path: Path) -> None:
     """Downloads require a token before any request is sent."""
     mock = GitLabMock()
