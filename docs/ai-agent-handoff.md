@@ -28,7 +28,7 @@ Issue methodology:
 | Package `model-fetcher` / import `model_fetcher` | Implemented; Phase 1 epics marked done |
 | GitLab registry + generic package download       | Implemented                                        |
 | GitLab Unleash and REST flag resolution          | Implemented                                        |
-| Live GitHub epic issues                          | Published from `docs/issues.yml` when sync succeeds |
+| Live GitHub epic issues                          | Not created. The available token gets HTTP 403 on issue creation. The backlog is `docs/issues.yml`. |
 | `docs/guardrails`                                | Gitlink tag 1.6.0 (`584b209`)                      |
 | `.github/scaffold`                               | Gitlink tag 1.5.0 (`6f33f78`)                      |
 
@@ -83,11 +83,15 @@ coverage gate) stay done on `GRD-001` and were not reopened. Publishing the
 Phase 1 records is the sync step, not a new open epic.
 
 **Outcome:** The open backlog is `OPS-001`, `REL-001`, `REL-002`, `GH-001`,
-`CACHE-002`, `GLREG-002`, `GLFLG-002`, and `NODE-001`.
+`CACHE-002`, `GLREG-002`, `GLFLG-002`, and `NODE-001`. `issues-sync.py
+--validate-only` accepts the manifest. A live sync was not published: the
+available token is forbidden from creating issues (HTTP 403).
 
 **Follow-ups:**
 
 - `OPS-001` is still the gate for green CI on main.
+- Re-run `issues-sync.py` with a token that can create issues, after the Phase
+  1 and Phase 2 milestones and the epic/task labels exist.
 
 ### 2026-09-21 (UTC) — Final review: redirects, pagination, header safety
 
