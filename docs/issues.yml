@@ -207,3 +207,292 @@ milestones:
             verification:
               - uv run python scripts/check-python-complexity.py
               - uv run python scripts/check-python-coverage.py
+  - name: Phase 2 — Operate and harden
+    status: open
+    epics:
+      - id: OPS-001
+        status: open
+        title: Let CI fetch the private guardrails and scaffold
+        decision: >-
+          In the context of quality, test, and docs workflows failing closed,
+          facing private gitlinks for guardrails 1.6.0 and scaffold 1.5.0, we
+          decided to store a contents-read token as the Actions secret
+          GUARDRAILS_READ_TOKEN instead of vendoring those repos, to achieve
+          green CI on main, accepting that a human has to create the secret.
+        overview:
+          problem: scripts/checkout-private-submodules.sh exits when the secret is empty.
+          goal: The quality, tests, and docs workflows check out the pinned gitlinks.
+        architecture:
+          target: .github/workflows, scripts/checkout-private-submodules.sh
+          modules: [model_fetcher]
+        acceptance_criteria:
+          - GUARDRAILS_READ_TOKEN can read pirlruc/guardrails and pirlruc/github-scaffold.
+          - A push to main completes the quality, tests, and docs workflows.
+        out_of_scope:
+          - Copying the private repositories into this repo.
+        tasks:
+          - id: OPS-001-T1
+            status: open
+            title: Add the Actions secret and rerun main CI
+            instructions:
+              files:
+                - .github/workflows/ci-quality.yml
+                - .github/workflows/ci-tests.yml
+                - .github/workflows/ci-docs.yml
+                - scripts/checkout-private-submodules.sh
+            verification:
+              - The quality, tests, and docs runs on main finish green.
+      - id: REL-001
+        status: open
+        title: Configure PyPI Trusted Publishing
+        decision: >-
+          In the context of the first release of model-fetcher, facing a
+          publish workflow that runs when a GitHub Release is published, we
+          decided to use PyPI Trusted Publishing for the model-fetcher project
+          instead of a long-lived token, to achieve publish-pypi.yml without a
+          stored password, accepting that the first tag waits on that trust
+          relationship.
+        overview:
+          problem: publish-pypi.yml will fail until PyPI trusts this repository.
+          goal: An annotated v*.*.* tag can publish the built distributions.
+        architecture:
+          target: .github/workflows/publish-pypi.yml
+          modules: [model_fetcher]
+        acceptance_criteria:
+          - PyPI lists this repo and the publish workflow as a trusted publisher.
+          - A published GitHub Release uploads the sdist and wheel.
+        tasks:
+          - id: REL-001-T1
+            status: open
+            title: Register the trusted publisher and confirm the workflow
+            instructions:
+              files:
+                - .github/workflows/publish-pypi.yml
+                - .github/workflows/release.yml
+            verification:
+              - The publish workflow's trusted-publishing environment matches PyPI.
+      - id: REL-002
+        status: open
+        title: Let Dependabot read the private submodules
+        decision: >-
+          In the context of monthly submodule updates, facing private
+          guardrails and scaffold gitlinks, we decided to add a Dependabot git
+          registry only after DEPENDABOT_GITHUB_TOKEN exists, to achieve
+          automated gitlink bumps, accepting that the registry stays absent
+          until that secret is created.
+        overview:
+          problem: gitsubmodule updates cannot clone the private pins.
+          goal: Dependabot can open pull requests that move the gitlinks.
+        architecture:
+          target: .github/dependabot.yml
+          modules: [model_fetcher]
+        acceptance_criteria:
+          - DEPENDABOT_GITHUB_TOKEN can read both private repositories.
+          - The Dependabot git registry is configured and a dry update run can
+            fetch the gitlinks.
+        tasks:
+          - id: REL-002-T1
+            status: open
+            title: Add the Dependabot git credential and registry
+            instructions:
+              files:
+                - .github/dependabot.yml
+            verification:
+              - dependabot.yml registers the git registry for github.com.
+      - id: GH-001
+        status: open
+        title: Download release assets from GitHub
+        decision: >-
+          In the context of a second model host, facing a facade that must stay
+          stable, we decided to add a GitHub Releases provider through
+          register_provider without changing ModelFetcher, to achieve the same
+          download and flag methods for GitHub, accepting a separate flag
+          source because GitHub has no Unleash API.
+        overview:
+          problem: Callers cannot fetch a release asset without a new client.
+          goal: ModelFetcher(provider="github") returns a verified Path.
+        architecture:
+          target: src/model_fetcher/providers, src/model_fetcher/client.py
+          modules: [model_fetcher]
+        acceptance_criteria:
+          - register_provider("github", ...) is shipped, not only documented.
+          - download_model returns a cached Path for one release asset.
+          - The public ModelFetcher method signatures stay the same.
+        out_of_scope:
+          - Loading or executing model bytes.
+        tasks:
+          - id: GH-001-T1
+            status: open
+            title: Implement the GitHub registry and flag providers
+            instructions:
+              files:
+                - src/model_fetcher/client.py
+                - src/model_fetcher/providers
+            verification:
+              - uv run pytest tests/test_client.py
+      - id: CACHE-002
+        status: open
+        title: Make cache writes exclusive and bounded
+        decision: >-
+          In the context of two processes fetching the same artifact, facing
+          the CACHE-001 acceptance of one shared <file>.downloading name, we
+          decided to give each writer its own temporary file and an exclusive
+          lock, and to add an optional maximum size, to achieve uncorrupted
+          artifacts and a disk bound, accepting an extra lock file beside the
+          artifact. Cache hits may trust a matching sidecar instead of hashing
+          the whole file again.
+        overview:
+          problem: A shared temp name can mix two writers, and every cache hit
+            re-reads multi-gigabyte files. A hostile body can fill the disk.
+          goal: One published file matches its digest, and reuse does not always
+            rehash it.
+        architecture:
+          target: src/model_fetcher/cache.py
+          modules: [model_fetcher]
+        acceptance_criteria:
+          - Two overlapping writes of the same destination cannot publish mixed
+            bytes.
+          - A caller-supplied maximum size rejects a larger stream and leaves
+            no final file.
+          - A cache hit with a matching sidecar does not rehash the file.
+        tasks:
+          - id: CACHE-002-T1
+            status: open
+            title: Use a unique temp file and an exclusive lock
+            instructions:
+              files:
+                - src/model_fetcher/cache.py
+                - tests/test_cache.py
+            verification:
+              - uv run pytest tests/test_cache.py
+          - id: CACHE-002-T2
+            status: open
+            title: Reject streams above an optional maximum size
+            instructions:
+              files:
+                - src/model_fetcher/cache.py
+                - src/model_fetcher/config.py
+                - tests/test_cache.py
+            verification:
+              - uv run pytest tests/test_cache.py
+          - id: CACHE-002-T3
+            status: open
+            title: Trust a matching sidecar on cache hits
+            instructions:
+              files:
+                - src/model_fetcher/cache.py
+                - tests/test_cache.py
+            verification:
+              - uv run pytest tests/test_cache.py
+      - id: GLREG-002
+        status: open
+        title: Retry GitLab failures and stop listing early
+        decision: >-
+          In the context of flaky registry calls and large model lists, facing
+          a single attempt and a full page walk before a name match, we decided
+          to retry transient 5xx and transport errors with a short bounded
+          backoff and to stop paging once the named model is found, to achieve
+          fewer false failures and less traffic, accepting no retry of 4xx.
+          A 401 or 403 from a cross-origin redirect target is a DownloadError,
+          not an AuthenticationError.
+        overview:
+          problem: One GitLab 5xx fails the download, and name lookup can walk
+            20 pages. Object storage often answers 403 with the GitLab token
+            already stripped.
+          goal: Transient failures are retried, and a storage 403 is reported as
+            a download failure.
+        architecture:
+          target: src/model_fetcher/providers/gitlab/http.py, src/model_fetcher/providers/gitlab/registry.py
+          modules: [model_fetcher]
+        acceptance_criteria:
+          - A single 503 followed by 200 still returns the artifact.
+          - 401 and 403 from the GitLab origin stay AuthenticationError.
+          - 403 from another host raises DownloadError.
+          - Model name search stops on the page that contains the name.
+        tasks:
+          - id: GLREG-002-T1
+            status: open
+            title: Retry transient GitLab responses
+            instructions:
+              files:
+                - src/model_fetcher/providers/gitlab/http.py
+                - tests/test_gitlab_registry.py
+            verification:
+              - uv run pytest tests/test_gitlab_registry.py
+          - id: GLREG-002-T2
+            status: open
+            title: Classify cross-origin auth failures as download errors
+            instructions:
+              files:
+                - src/model_fetcher/providers/gitlab/http.py
+                - tests/test_gitlab_registry.py
+            verification:
+              - uv run pytest tests/test_gitlab_registry.py
+          - id: GLREG-002-T3
+            status: open
+            title: Stop the model list once the name matches
+            instructions:
+              files:
+                - src/model_fetcher/providers/gitlab/registry.py
+                - tests/test_gitlab_registry.py
+            verification:
+              - uv run pytest tests/test_gitlab_registry.py
+      - id: GLFLG-002
+        status: open
+        title: Honor gradual rollout percentages
+        decision: >-
+          In the context of a flag that enables a model for a percentage of
+          users, facing the GLFLG-001 acceptance that rollout percentages are
+          not simulated, we decided to evaluate gradualRolloutUserId from the
+          user id with the same stickiness bucket GitLab uses, to achieve an
+          enabled bit that matches the flag for that user, accepting that
+          uncommon strategy types can still fall through as non-matching.
+        overview:
+          problem: A rollout strategy currently counts as enabled for every user
+            once the environment scope matches.
+          goal: download_from_feature_flag follows the percentage for user_id.
+        architecture:
+          target: src/model_fetcher/providers/gitlab/flag_eval.py
+          modules: [model_fetcher]
+        acceptance_criteria:
+          - The same user_id stays inside or outside a percentage across calls.
+          - A 0 percent rollout does not resolve a model.
+          - A 100 percent rollout resolves the payload.
+        tasks:
+          - id: GLFLG-002-T1
+            status: open
+            title: Evaluate gradualRolloutUserId
+            instructions:
+              files:
+                - src/model_fetcher/providers/gitlab/flag_eval.py
+                - tests/test_gitlab_flags.py
+            verification:
+              - uv run pytest tests/test_gitlab_flags.py
+      - id: NODE-001
+        status: open
+        title: Drop the Node 24 force flag when actions no longer need it
+        decision: >-
+          In the context of FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 on every
+          workflow, facing actions that may already run on Node 24, we decided
+          to remove the force flag only after each pinned action declares Node
+          24, to achieve workflows without a global override, accepting that
+          the flag stays until that audit is done.
+        overview:
+          problem: The force flag hides which actions are not Node 24-ready.
+          goal: Workflows run on the action's own Node version.
+        architecture:
+          target: .github/workflows
+          modules: [model_fetcher]
+        acceptance_criteria:
+          - No workflow sets FORCE_JAVASCRIPT_ACTIONS_TO_NODE24.
+          - The pinned actions, including gitleaks-action, still complete.
+        tasks:
+          - id: NODE-001-T1
+            status: open
+            title: Remove the force flag after the action audit
+            instructions:
+              files:
+                - .github/workflows
+            verification:
+              - The quality and security workflows complete without the force flag.
+

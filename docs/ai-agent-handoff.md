@@ -28,7 +28,7 @@ Issue methodology:
 | Package `model-fetcher` / import `model_fetcher` | Implemented; Phase 1 epics marked done |
 | GitLab registry + generic package download       | Implemented                                        |
 | GitLab Unleash and REST flag resolution          | Implemented                                        |
-| Live GitHub epic issues                          | Not opened (CLI is read-only in this environment)  |
+| Live GitHub epic issues                          | Published from `docs/issues.yml` when sync succeeds |
 | `docs/guardrails`                                | Gitlink tag 1.6.0 (`584b209`)                      |
 | `.github/scaffold`                               | Gitlink tag 1.5.0 (`6f33f78`)                      |
 
@@ -57,15 +57,37 @@ uv build
 
 ## Suggested next work
 
-- Open the Phase 1 epics from `docs/issues.yml` when issue creation is available.
-- Add the Actions secret `GUARDRAILS_READ_TOKEN` so CI can fetch the private submodules.
-- Add a Dependabot secret before private submodule updates can refresh the gitlinks.
-- Configure PyPI Trusted Publishing before the first annotated tag.
-- Add a GitHub provider via `register_provider` without changing `ModelFetcher`.
+Open epics in `docs/issues.yml` under Phase 2 — Operate and harden:
+
+- `OPS-001` — Actions secret `GUARDRAILS_READ_TOKEN`
+- `REL-001` — PyPI Trusted Publishing
+- `REL-002` — Dependabot credential for the private submodules
+- `GH-001` — GitHub Releases provider
+- `CACHE-002` — exclusive cache writes, size cap, sidecar hits
+- `GLREG-002` — retries, cross-origin 403, early model-list stop
+- `GLFLG-002` — gradual rollout percentages
+- `NODE-001` — remove `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` after the action audit
 
 ______________________________________________________________________
 
 ## Log entries (newest first)
+
+### 2026-09-22 (UTC) — Improvements moved into the issue manifest
+
+**Trigger:** Record the improvements for the current code as issues, migrate
+`docs/improvements.md` into that backlog, and delete the improvements file.
+
+**Actions:** Appended Phase 2 epics to `docs/issues.yml`. Deleted
+`docs/improvements.md`. The two completed checkboxes (guardrails pin and the
+coverage gate) stay done on `GRD-001` and were not reopened. Publishing the
+Phase 1 records is the sync step, not a new open epic.
+
+**Outcome:** The open backlog is `OPS-001`, `REL-001`, `REL-002`, `GH-001`,
+`CACHE-002`, `GLREG-002`, `GLFLG-002`, and `NODE-001`.
+
+**Follow-ups:**
+
+- `OPS-001` is still the gate for green CI on main.
 
 ### 2026-09-21 (UTC) — Final review: redirects, pagination, header safety
 

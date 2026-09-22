@@ -26,3 +26,5 @@ labels:
 milestones:
   - name: Phase 1 — GitLab fetcher
     description: GitLab download and feature-flag resolution
+  - name: Phase 2 — Operate and harden
+    description: Release access, a GitHub provider, and the review follow-ups
