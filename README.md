@@ -76,9 +76,9 @@ The same client works against GitLab.com and self-hosted instances.
 
 ## Cache
 
-Each writer streams to its own `<name>.downloading.<pid>.<uuid>` file while holding
-`<name>.lock`, then renames the file only after the byte count and SHA-256 digest match. A cache
-hit whose sidecar already equals the expected digest is returned without hashing the file again.
+Each writer streams to its own `<name>.downloading.<pid>.<uuid>` file, then holds `<name>.lock`
+only while renaming that file into place and writing the sidecar. A cache hit whose sidecar equals
+the expected digest and is newer than the file is returned without hashing the file again.
 `max_bytes=` rejects a larger body and leaves no final file; omitting it does not cap the download.
 A valid cached file is returned immediately unless `force_download=True`. Slashes in a project path
 are encoded so the path cannot escape the cache root.

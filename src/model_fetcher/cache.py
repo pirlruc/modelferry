@@ -151,9 +151,10 @@ class CacheManager:
         """Return a cached download when the file is complete and the digest matches.
 
         A sibling ``<file>.downloading`` marker means a write is in progress or was
-        interrupted, so the destination is ignored. A sidecar that already equals the
-        expected digest is trusted without reading the file again. Otherwise a sidecar
-        must match the bytes on disk.
+        interrupted, so the destination is ignored. A sidecar that equals the expected
+        digest and is newer than the file is trusted without reading the file again.
+        Otherwise a sidecar must match the bytes on disk. The check holds a shared
+        lock so it does not observe a publish between the rename and the sidecar.
 
         Args:
             path: Candidate artifact path.
@@ -162,16 +163,20 @@ class CacheManager:
         Returns:
             A cached result, or ``None`` when the file should be downloaded again.
         """
-        digest = self._validate(path, expected_sha256=expected_sha256)
-        if digest is None:
+        if not path.is_file():
             return None
 
-        return DownloadResult(
-            local_path=path,
-            is_cached=True,
-            size_bytes=path.stat().st_size,
-            sha256_hash=digest,
-        )
+        with _file_lock(path.with_name(path.name + ".lock"), fcntl.LOCK_SH):
+            digest = self._validate(path, expected_sha256=expected_sha256)
+            if digest is None:
+                return None
+
+            return DownloadResult(
+                local_path=path,
+                is_cached=True,
+                size_bytes=path.stat().st_size,
+                sha256_hash=digest,
+            )
 
     def write_atomic(
         self,
@@ -184,8 +189,9 @@ class CacheManager:
     ) -> DownloadResult:
         """Stream bytes to a private temporary file and rename only after verification.
 
-        Each writer uses its own temporary name and holds ``<file>.lock`` until the
-        sidecar is in place, so two processes cannot publish a mix of both bodies.
+        Each writer uses its own temporary name. ``<file>.lock`` is held only while
+        the verified file and its sidecar replace the previous pair, so a reader can
+        keep using the previous artifact during the download.
 
         Args:
             destination: Final artifact path.
@@ -206,11 +212,9 @@ class CacheManager:
         destination.parent.mkdir(parents=True, exist_ok=True)
         temporary = destination.with_name(_partial_name(destination.name))
         try:
-            with _exclusive_lock(destination.with_name(destination.name + ".lock")):
-                size, file_hash = _stream_to(temporary, chunks, max_bytes=max_bytes)
-                _assert_complete(destination.name, size, file_hash, expected, expected_size)
-                os.replace(temporary, destination)
-                _write_sidecar(destination, file_hash)
+            size, file_hash = _stream_to(temporary, chunks, max_bytes=max_bytes)
+            _assert_complete(destination.name, size, file_hash, expected, expected_size)
+            _publish(destination, temporary, file_hash)
         except Exception:  # pylint: disable=broad-exception-caught
             # The caller-supplied stream can fail in provider-specific ways.
             temporary.unlink(missing_ok=True)
@@ -238,7 +242,7 @@ class CacheManager:
 
         expected = normalize_sha256(expected_sha256)
         recorded = _sidecar_digest(path)
-        if recorded is not None and expected is not None and recorded == expected:
+        if _sidecar_can_be_trusted(path, recorded, expected):
             return recorded
 
         actual = file_sha256(path)
@@ -346,6 +350,19 @@ def _assert_complete(
         )
 
 
+def _publish(destination: Path, temporary: Path, file_hash: str) -> None:
+    """Install a verified file and its sidecar as one locked pair.
+
+    Args:
+        destination: Final artifact path.
+        temporary: Verified temporary file to move into place.
+        file_hash: Digest to record beside the artifact.
+    """
+    with _file_lock(destination.with_name(destination.name + ".lock"), fcntl.LOCK_EX):
+        os.replace(temporary, destination)
+        _write_sidecar(destination, file_hash)
+
+
 def _write_sidecar(destination: Path, file_hash: str) -> None:
     """Replace the checksum sidecar after the artifact itself is in place.
 
@@ -357,6 +374,24 @@ def _write_sidecar(destination: Path, file_hash: str) -> None:
     sidecar_tmp = Path(str(sidecar) + "." + _partial_name("part"))
     sidecar_tmp.write_text(f"{file_hash}\n", encoding="utf-8")
     os.replace(sidecar_tmp, sidecar)
+    _bump_sidecar_mtime(destination, sidecar)
+
+
+def _bump_sidecar_mtime(destination: Path, sidecar: Path) -> None:
+    """Make the sidecar strictly newer than the artifact.
+
+    A crash between the rename and this write leaves the previous sidecar older
+    than the new file, so lookup will hash instead of trusting it.
+
+    Args:
+        destination: Published artifact.
+        sidecar: Checksum file just written for ``destination``.
+    """
+    file_ns = destination.stat().st_mtime_ns
+    if sidecar.stat().st_mtime_ns > file_ns:
+        return
+
+    os.utime(sidecar, ns=(file_ns + 1, file_ns + 1))
 
 
 def _partial_name(name: str) -> str:
@@ -391,17 +426,18 @@ def _reject_declared_size(name: str, expected_size: int | None, max_bytes: int |
 
 
 @contextmanager
-def _exclusive_lock(path: Path) -> Iterator[None]:
-    """Hold an exclusive advisory lock for the duration of a publish.
+def _file_lock(path: Path, mode: int) -> Iterator[None]:
+    """Hold an advisory lock until the block exits.
 
     Args:
         path: Lock file created beside the artifact.
+        mode: ``fcntl.LOCK_SH`` for readers or ``fcntl.LOCK_EX`` for publishers.
 
     Yields:
         Nothing. The lock is released when the block exits.
     """
     with path.open("a+b") as handle:
-        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        fcntl.flock(handle.fileno(), mode)
         try:
             yield
         finally:
@@ -439,6 +475,39 @@ def _sidecar_digest(path: Path) -> str | None:
         return None
 
     return recorded[0].lower()
+
+
+def _sidecar_can_be_trusted(path: Path, recorded: str | None, expected: str | None) -> bool:
+    """Return whether the sidecar may stand in for a full-file hash.
+
+    Args:
+        path: Artifact path.
+        recorded: Sidecar digest, when one exists.
+        expected: Digest required by the caller, when one was supplied.
+
+    Returns:
+        True when the sidecar equals the expected digest and is newer than the file.
+    """
+    if recorded is None or expected is None or recorded != expected:
+        return False
+
+    return _sidecar_is_newer(path)
+
+
+def _sidecar_is_newer(path: Path) -> bool:
+    """Return whether the sidecar was written after the artifact.
+
+    Args:
+        path: Artifact path.
+
+    Returns:
+        True when the sidecar's modification time is strictly later.
+    """
+    sidecar = Path(str(path) + ".sha256")
+    try:
+        return sidecar.stat().st_mtime_ns > path.stat().st_mtime_ns
+    except OSError:
+        return False
 
 
 def _digest_ok(actual: str, recorded: str | None, expected: str | None) -> bool:

@@ -1,6 +1,8 @@
 """Tests for the local artifact cache."""
 
+import fcntl
 import hashlib
+import os
 import threading
 from collections.abc import Iterator
 from pathlib import Path
@@ -139,7 +141,10 @@ def test_matching_sidecar_skips_a_full_hash(
     payload = b"model-bytes"
     digest = hashlib.sha256(payload).hexdigest()
     destination.write_bytes(payload)
-    Path(str(destination) + ".sha256").write_text(f"{digest}\n", encoding="utf-8")
+    sidecar = Path(str(destination) + ".sha256")
+    sidecar.write_text(f"{digest}\n", encoding="utf-8")
+    published_at = destination.stat().st_mtime_ns
+    os.utime(sidecar, ns=(published_at + 1, published_at + 1))
 
     def fail_hash(path: Path) -> str:
         raise AssertionError(path)
@@ -149,6 +154,67 @@ def test_matching_sidecar_skips_a_full_hash(
     assert cached is not None
     assert cached.sha256_hash == digest
     assert file_sha256(destination) == digest
+
+
+def test_published_sidecar_skips_a_full_hash(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A file published by the cache is trusted from its sidecar."""
+    cache = CacheManager(tmp_path)
+    destination = tmp_path / "model.onnx"
+    payload = b"model-bytes"
+    digest = hashlib.sha256(payload).hexdigest()
+    cache.write_atomic(destination, _chunks(payload), expected_sha256=digest)
+
+    def fail_hash(path: Path) -> str:
+        raise AssertionError(path)
+
+    monkeypatch.setattr("model_fetcher.cache.file_sha256", fail_hash)
+    cached = cache.lookup(destination, expected_sha256=digest)
+    assert cached is not None
+    assert cached.sha256_hash == digest
+
+
+def test_stale_sidecar_does_not_attest_a_newer_file(tmp_path: Path) -> None:
+    """A sidecar older than the file cannot vouch for different bytes."""
+    cache = CacheManager(tmp_path)
+    destination = tmp_path / "model.onnx"
+    previous = hashlib.sha256(b"previous").hexdigest()
+    destination.write_bytes(b"replacement")
+    sidecar = Path(str(destination) + ".sha256")
+    sidecar.write_text(f"{previous}\n", encoding="utf-8")
+    os.utime(destination, ns=(2_000_000_000, 2_000_000_000))
+    os.utime(sidecar, ns=(1_000_000_000, 1_000_000_000))
+
+    assert cache.lookup(destination, expected_sha256=previous) is None
+
+
+def test_streaming_does_not_hold_the_publish_lock(tmp_path: Path) -> None:
+    """Readers can lock the artifact while its body is still streaming."""
+    cache = CacheManager(tmp_path)
+    destination = tmp_path / "model.onnx"
+    started = threading.Event()
+    release = threading.Event()
+
+    def chunks() -> Iterator[bytes]:
+        started.set()
+        assert release.wait(timeout=5)
+        yield b"abc"
+
+    thread = threading.Thread(target=lambda: cache.write_atomic(destination, chunks()))
+    thread.start()
+    assert started.wait(timeout=5)
+    lock_path = destination.with_name("model.onnx.lock")
+    try:
+        with lock_path.open("a+b") as handle:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+    finally:
+        release.set()
+        thread.join(timeout=5)
+
+    assert not thread.is_alive()
+    assert destination.read_bytes() == b"abc"
 
 
 def test_overlapping_writes_do_not_mix_bytes(tmp_path: Path) -> None:

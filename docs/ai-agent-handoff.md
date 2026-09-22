@@ -69,6 +69,31 @@ ______________________________________________________________________
 
 ## Log entries (newest first)
 
+### 2026-09-22 (UTC) — Cache publish stays consistent under the lock
+
+**Trigger:** Final pass for bugs, design flaws, performance, and security on the
+CACHE, GLREG, and GLFLG work. Merge and delete the branch if nothing remains.
+
+**Actions:** The exclusive lock now covers only the rename and the sidecar
+write, so a download no longer blocks readers of the previous artifact. Lookup
+takes the shared lock and trusts a sidecar only when it equals the expected
+digest and is strictly newer than the file. A publish bumps the sidecar mtime
+when the filesystem would otherwise stamp both files together.
+
+**Outcome:** 64 tests pass. Pylint is 10/10. Complexity stays inside the 1.6.0
+floors (max cyclomatic complexity 8, average 3.03, minimum maintainability
+index 40.59, average 72.20). Statement coverage is 98.21% and branch coverage
+is 95.53%. Retries, cross-origin 403 handling, early model-list stop, and
+`gradualRolloutUserId` were rechecked and left as implemented. Strategy names
+other than `default`, `userWithId`, and `gradualRolloutUserId` still match
+after the environment check, which is the Phase 1 behavior. `flexibleRollout`
+is not simulated.
+
+**Follow-ups:**
+
+- `OPS-001` is still the gate for green CI on main.
+- Re-run `issues-sync.py` with a token that can create issues.
+
 ### 2026-09-22 (UTC) — Exclusive cache writes, GitLab retries, gradual rollout
 
 **Trigger:** Advance the implementation of CACHE, GLREG, and GLFLG.

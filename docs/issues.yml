@@ -355,6 +355,7 @@ milestones:
           - A caller-supplied maximum size rejects a larger stream and leaves
             no final file.
           - A cache hit with a matching sidecar does not rehash the file.
+          - A sidecar older than the file is hashed instead of trusted.
         tasks:
           - id: CACHE-002-T1
             status: done
