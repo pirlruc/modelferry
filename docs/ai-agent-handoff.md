@@ -25,7 +25,7 @@ Issue methodology:
 
 | Item                                             | State                                              |
 | ------------------------------------------------ | -------------------------------------------------- |
-| Package `model-fetcher` / import `model_fetcher` | Implemented; Phase 1 epics marked done |
+| Package `model-fetcher` / import `model_fetcher` | Implemented. Phase 1 is done. CACHE-002, GLREG-002, and GLFLG-002 are done. |
 | GitLab registry + generic package download       | Implemented                                        |
 | GitLab Unleash and REST flag resolution          | Implemented                                        |
 | Live GitHub epic issues                          | Not created. The available token gets HTTP 403 on issue creation. The backlog is `docs/issues.yml`. |
@@ -63,14 +63,39 @@ Open epics in `docs/issues.yml` under Phase 2 — Operate and harden:
 - `REL-001` — PyPI Trusted Publishing
 - `REL-002` — Dependabot credential for the private submodules
 - `GH-001` — GitHub Releases provider
-- `CACHE-002` — exclusive cache writes, size cap, sidecar hits
-- `GLREG-002` — retries, cross-origin 403, early model-list stop
-- `GLFLG-002` — gradual rollout percentages
 - `NODE-001` — remove `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` after the action audit
 
 ______________________________________________________________________
 
 ## Log entries (newest first)
+
+### 2026-09-22 (UTC) — Exclusive cache writes, GitLab retries, gradual rollout
+
+**Trigger:** Advance the implementation of CACHE, GLREG, and GLFLG.
+
+**Actions:** Cache writes now use a unique temporary file and an exclusive
+`<file>.lock` around the stream, replace, and sidecar. `ModelFetcher(max_bytes=)`
+rejects a larger declared or streamed body. A sidecar that already equals the
+expected digest is trusted without rehashing the file. GitLab GET calls retry
+transport errors and statuses 500, 502, 503, and 504 three times; 4xx is not
+retried. A 401 or 403 from a cross-origin host is `DownloadError`, while the
+same statuses from the GitLab origin stay `AuthenticationError`. Model-name
+search stops on the page that contains the name. `gradualRolloutUserId` uses
+MurmurHash3 x86 32 (seed 0) of `groupId:userId`, with the bucket
+`(hash % 100) + 1`. Marked `CACHE-002`, `GLREG-002`, `GLFLG-002`, and their
+tasks done. The Phase 2 milestone stays open.
+
+**Outcome:** 61 tests pass. Pylint is 10/10. Complexity stays inside the 1.6.0
+floors (max cyclomatic complexity 8, average 3.06, minimum maintainability
+index 40.59, average 72.38). Statement coverage is 98.36% and branch coverage
+is 95.45%. `None` remains an unlimited download. Unknown strategy names still
+match after the environment check. Live GitHub issue sync is still blocked.
+
+**Follow-ups:**
+
+- `OPS-001` is still the gate for green CI on main.
+- Re-run `issues-sync.py` with a token that can create issues, after the Phase
+  1 and Phase 2 milestones and the epic/task labels exist.
 
 ### 2026-09-22 (UTC) — Improvements moved into the issue manifest
 

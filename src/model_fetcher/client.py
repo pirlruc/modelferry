@@ -73,6 +73,7 @@ class ModelFetcher:
         cache_dir: str | Path | None = None,
         timeout: float = 30.0,
         *,
+        max_bytes: int | None = None,
         unleash_instance_id: str | None = None,
         unleash_app_name: str | None = None,
         client: httpx.Client | None = None,
@@ -85,6 +86,7 @@ class ModelFetcher:
             token: Access token. Falls back to ``GITLAB_TOKEN`` then ``CI_JOB_TOKEN``.
             cache_dir: Cache root. Defaults to ``~/.cache/model_fetcher``.
             timeout: HTTP timeout in seconds.
+            max_bytes: Optional maximum artifact size in bytes.
             unleash_instance_id: GitLab Unleash instance id for feature flags.
             unleash_app_name: Unleash app name, usually the environment.
             client: Optional HTTP client. When omitted, the fetcher owns a client
@@ -101,6 +103,7 @@ class ModelFetcher:
                 token=token,
                 cache_dir=cache_dir,
                 timeout=timeout,
+                max_bytes=max_bytes,
                 unleash_instance_id=unleash_instance_id,
                 unleash_app_name=unleash_app_name,
             )

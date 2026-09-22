@@ -54,3 +54,6 @@ def test_invalid_configuration_is_a_library_error() -> None:
 
     with pytest.raises(ModelFetcherError):
         ModelFetcher(token="test-token", timeout=0)
+
+    with pytest.raises(ModelFetcherError):
+        ModelFetcher(token="test-token", max_bytes=0)

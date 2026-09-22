@@ -266,6 +266,62 @@ def test_refuses_unsafe_or_endless_redirects(tmp_path: Path) -> None:
         fetcher.download_model(42, "fraud", "v1", file_name="model.onnx")
 
 
+def test_transient_error_is_retried_and_storage_403_is_a_download_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A GitLab 503 is retried, and object storage 403 is not an authentication error."""
+    monkeypatch.setattr("model_fetcher.providers.gitlab.http._pause", lambda _attempt: None)
+    mock = GitLabMock()
+    mock.add("GET", _VERSION, json_body=_version_document())
+    mock.push("GET", _FILE, status=503, content=b"busy")
+    mock.add("GET", _FILE, content=_PAYLOAD)
+    client, fetcher = _fetcher(mock, tmp_path)
+    with client, fetcher:
+        saved = fetcher.download_model(42, "fraud", "v1", file_name="model.onnx")
+
+    assert saved.read_bytes() == _PAYLOAD
+    assert mock.paths().count(_FILE) == 2
+
+    storage = GitLabMock()
+    storage.add("GET", _VERSION, json_body=_version_document())
+    storage.add(
+        "GET",
+        _FILE,
+        status=302,
+        headers={"location": "https://storage.example/objects/model.onnx"},
+    )
+    storage.add("GET", "/objects/model.onnx", status=403, content=b"denied")
+    client, fetcher = _fetcher(storage, tmp_path / "storage")
+    with client, fetcher, pytest.raises(DownloadError, match="403"):
+        fetcher.download_model(42, "fraud", "v1", file_name="model.onnx")
+
+
+def test_model_list_stops_when_the_name_is_found(tmp_path: Path) -> None:
+    """Name lookup does not request the next page after the model appears."""
+    mock = GitLabMock()
+    mock.add("GET", _VERSION, status=404)
+    mock.push(
+        "GET",
+        "/api/v4/projects/42/ml/models",
+        json_body=[{"id": 3, "name": "fraud"}],
+        headers={"x-next-page": "2"},
+    )
+    mock.add("GET", "/api/v4/projects/42/ml/models", status=500, json_body={"message": "nope"})
+    mock.add(
+        "GET",
+        "/api/v4/projects/42/ml/models/3/versions",
+        json_body=[{"id": 7, "version": "v1"}],
+    )
+    mock.add("GET", _FILE, content=_PAYLOAD)
+    client, fetcher = _fetcher(mock, tmp_path)
+    with client, fetcher:
+        saved = fetcher.download_model(42, "fraud", "v1", file_name="model.onnx")
+
+    assert saved.read_bytes() == _PAYLOAD
+    assert mock.paths().count("/api/v4/projects/42/ml/models") == 1
+
+
 def test_missing_token_is_an_authentication_error(tmp_path: Path) -> None:
     """Downloads require a token before any request is sent."""
     mock = GitLabMock()

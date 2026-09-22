@@ -331,7 +331,7 @@ milestones:
             verification:
               - uv run pytest tests/test_client.py
       - id: CACHE-002
-        status: open
+        status: done
         title: Make cache writes exclusive and bounded
         decision: >-
           In the context of two processes fetching the same artifact, facing
@@ -357,7 +357,7 @@ milestones:
           - A cache hit with a matching sidecar does not rehash the file.
         tasks:
           - id: CACHE-002-T1
-            status: open
+            status: done
             title: Use a unique temp file and an exclusive lock
             instructions:
               files:
@@ -366,7 +366,7 @@ milestones:
             verification:
               - uv run pytest tests/test_cache.py
           - id: CACHE-002-T2
-            status: open
+            status: done
             title: Reject streams above an optional maximum size
             instructions:
               files:
@@ -376,7 +376,7 @@ milestones:
             verification:
               - uv run pytest tests/test_cache.py
           - id: CACHE-002-T3
-            status: open
+            status: done
             title: Trust a matching sidecar on cache hits
             instructions:
               files:
@@ -385,7 +385,7 @@ milestones:
             verification:
               - uv run pytest tests/test_cache.py
       - id: GLREG-002
-        status: open
+        status: done
         title: Retry GitLab failures and stop listing early
         decision: >-
           In the context of flaky registry calls and large model lists, facing
@@ -411,7 +411,7 @@ milestones:
           - Model name search stops on the page that contains the name.
         tasks:
           - id: GLREG-002-T1
-            status: open
+            status: done
             title: Retry transient GitLab responses
             instructions:
               files:
@@ -420,7 +420,7 @@ milestones:
             verification:
               - uv run pytest tests/test_gitlab_registry.py
           - id: GLREG-002-T2
-            status: open
+            status: done
             title: Classify cross-origin auth failures as download errors
             instructions:
               files:
@@ -429,7 +429,7 @@ milestones:
             verification:
               - uv run pytest tests/test_gitlab_registry.py
           - id: GLREG-002-T3
-            status: open
+            status: done
             title: Stop the model list once the name matches
             instructions:
               files:
@@ -438,7 +438,7 @@ milestones:
             verification:
               - uv run pytest tests/test_gitlab_registry.py
       - id: GLFLG-002
-        status: open
+        status: done
         title: Honor gradual rollout percentages
         decision: >-
           In the context of a flag that enables a model for a percentage of
@@ -460,7 +460,7 @@ milestones:
           - A 100 percent rollout resolves the payload.
         tasks:
           - id: GLFLG-002-T1
-            status: open
+            status: done
             title: Evaluate gradualRolloutUserId
             instructions:
               files:

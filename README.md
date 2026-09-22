@@ -58,7 +58,8 @@ model_path = fetcher.download_from_feature_flag(
 
 `get_feature_flag` returns the enablement bit and coordinates without downloading. A missing flag
 raises `FeatureFlagError`. A disabled flag, or an enabled flag with no model payload, also raises
-from `download_from_feature_flag`.
+from `download_from_feature_flag`. A `gradualRolloutUserId` strategy includes `context["user_id"]`
+only when that user's stickiness bucket falls inside the percentage.
 
 Unleash is used when `GITLAB_UNLEASH_INSTANCE_ID` (or `unleash_instance_id=`) is set. Otherwise the
 client calls the project feature-flag REST API.
@@ -75,9 +76,12 @@ The same client works against GitLab.com and self-hosted instances.
 
 ## Cache
 
-Files are written to `<name>.downloading` and renamed only after the byte count and SHA-256 digest
-match. A valid cached file is returned immediately unless `force_download=True`. Slashes in a
-project path are encoded so the path cannot escape the cache root.
+Each writer streams to its own `<name>.downloading.<pid>.<uuid>` file while holding
+`<name>.lock`, then renames the file only after the byte count and SHA-256 digest match. A cache
+hit whose sidecar already equals the expected digest is returned without hashing the file again.
+`max_bytes=` rejects a larger body and leaves no final file; omitting it does not cap the download.
+A valid cached file is returned immediately unless `force_download=True`. Slashes in a project path
+are encoded so the path cannot escape the cache root.
 
 ## Another provider
 

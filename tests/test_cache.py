@@ -1,12 +1,13 @@
 """Tests for the local artifact cache."""
 
 import hashlib
+import threading
 from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
 
-from model_fetcher.cache import CacheManager, cache_segment
+from model_fetcher.cache import CacheManager, cache_segment, file_sha256
 from model_fetcher.exceptions import DownloadError
 
 
@@ -112,6 +113,66 @@ def test_downloading_marker_and_sidecar_mismatch_are_cache_misses(tmp_path: Path
     destination.with_name("model.onnx.downloading").unlink()
     Path(str(destination) + ".sha256").write_text(f"{'ab' * 32}\n", encoding="utf-8")
     assert cache.lookup(destination) is None
+
+
+def test_max_bytes_rejects_an_oversized_stream(tmp_path: Path) -> None:
+    """A declared or streamed length above the cap never becomes the artifact."""
+    cache = CacheManager(tmp_path)
+    destination = tmp_path / "model.onnx"
+    with pytest.raises(DownloadError, match="max_bytes"):
+        cache.write_atomic(destination, _chunks(b"hello"), expected_size=5, max_bytes=4)
+
+    assert not destination.exists()
+    with pytest.raises(DownloadError, match="max_bytes"):
+        cache.write_atomic(destination, _chunks(b"hello-world"), max_bytes=5)
+
+    assert not destination.exists()
+    assert not list(tmp_path.glob("model.onnx.downloading.*"))
+
+
+def test_matching_sidecar_skips_a_full_hash(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A sidecar that already equals the expected digest is not rehashed."""
+    cache = CacheManager(tmp_path)
+    destination = tmp_path / "model.onnx"
+    payload = b"model-bytes"
+    digest = hashlib.sha256(payload).hexdigest()
+    destination.write_bytes(payload)
+    Path(str(destination) + ".sha256").write_text(f"{digest}\n", encoding="utf-8")
+
+    def fail_hash(path: Path) -> str:
+        raise AssertionError(path)
+
+    monkeypatch.setattr("model_fetcher.cache.file_sha256", fail_hash)
+    cached = cache.lookup(destination, expected_sha256=digest)
+    assert cached is not None
+    assert cached.sha256_hash == digest
+    assert file_sha256(destination) == digest
+
+
+def test_overlapping_writes_do_not_mix_bytes(tmp_path: Path) -> None:
+    """Two writers publishing the same path each leave a single consistent file."""
+    cache = CacheManager(tmp_path)
+    destination = tmp_path / "model.onnx"
+    barrier = threading.Barrier(2)
+    payloads = (b"a" * 64, b"b" * 64)
+
+    def publish(payload: bytes) -> None:
+        barrier.wait(timeout=5)
+        cache.write_atomic(destination, _chunks(payload))
+
+    threads = [threading.Thread(target=publish, args=(payload,)) for payload in payloads]
+    for thread in threads:
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+
+    published = destination.read_bytes()
+    assert published in payloads
+    recorded = Path(str(destination) + ".sha256").read_text(encoding="utf-8").strip()
+    assert recorded == hashlib.sha256(published).hexdigest()
 
 
 def test_target_dir_places_the_file_directly(tmp_path: Path) -> None:

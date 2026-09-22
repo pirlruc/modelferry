@@ -1,9 +1,15 @@
 """Local artifact cache with atomic writes and SHA-256 verification."""
 
+from __future__ import annotations
+
+import fcntl
 import hashlib
 import os
+import uuid
 from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
+from typing import Any, BinaryIO
 
 from model_fetcher.exceptions import DownloadError
 from model_fetcher.models import DownloadResult
@@ -145,8 +151,9 @@ class CacheManager:
         """Return a cached download when the file is complete and the digest matches.
 
         A sibling ``<file>.downloading`` marker means a write is in progress or was
-        interrupted, so the destination is ignored. When a ``<file>.sha256`` sidecar
-        exists, it must match the bytes on disk.
+        interrupted, so the destination is ignored. A sidecar that already equals the
+        expected digest is trusted without reading the file again. Otherwise a sidecar
+        must match the bytes on disk.
 
         Args:
             path: Candidate artifact path.
@@ -173,29 +180,37 @@ class CacheManager:
         *,
         expected_sha256: str | None = None,
         expected_size: int | None = None,
+        max_bytes: int | None = None,
     ) -> DownloadResult:
-        """Stream bytes to ``<file>.downloading`` and rename only after verification.
+        """Stream bytes to a private temporary file and rename only after verification.
+
+        Each writer uses its own temporary name and holds ``<file>.lock`` until the
+        sidecar is in place, so two processes cannot publish a mix of both bodies.
 
         Args:
             destination: Final artifact path.
             chunks: File body in order.
             expected_sha256: Digest the bytes must match.
             expected_size: Content length the bytes must match.
+            max_bytes: Maximum accepted size. ``None`` does not cap the stream.
 
         Returns:
             The verified download result with ``is_cached`` set to false.
 
         Raises:
-            DownloadError: If the stream is empty, the size differs, or the digest differs.
+            DownloadError: If the stream is empty, too large, the size differs, or the
+                digest differs.
         """
         expected = normalize_sha256(expected_sha256)
+        _reject_declared_size(destination.name, expected_size, max_bytes)
         destination.parent.mkdir(parents=True, exist_ok=True)
-        temporary = destination.with_name(destination.name + ".downloading")
+        temporary = destination.with_name(_partial_name(destination.name))
         try:
-            size, file_hash = _stream_to(temporary, chunks)
-            _assert_complete(destination.name, size, file_hash, expected, expected_size)
-            os.replace(temporary, destination)
-            _write_sidecar(destination, file_hash)
+            with _exclusive_lock(destination.with_name(destination.name + ".lock")):
+                size, file_hash = _stream_to(temporary, chunks, max_bytes=max_bytes)
+                _assert_complete(destination.name, size, file_hash, expected, expected_size)
+                os.replace(temporary, destination)
+                _write_sidecar(destination, file_hash)
         except Exception:  # pylint: disable=broad-exception-caught
             # The caller-supplied stream can fail in provider-specific ways.
             temporary.unlink(missing_ok=True)
@@ -221,42 +236,81 @@ class CacheManager:
         if not _cache_file_ready(path):
             return None
 
-        actual = file_sha256(path)
-        if not _sidecar_matches(path, actual):
-            return None
-
         expected = normalize_sha256(expected_sha256)
-        if expected is not None and actual != expected:
+        recorded = _sidecar_digest(path)
+        if recorded is not None and expected is not None and recorded == expected:
+            return recorded
+
+        actual = file_sha256(path)
+        if not _digest_ok(actual, recorded, expected):
             return None
 
         return actual
 
 
-def _stream_to(temporary: Path, chunks: Iterator[bytes]) -> tuple[int, str]:
+def _stream_to(
+    temporary: Path,
+    chunks: Iterator[bytes],
+    *,
+    max_bytes: int | None,
+) -> tuple[int, str]:
     """Write chunks to ``temporary`` and return the size and SHA-256.
 
     Args:
         temporary: Incomplete download path.
         chunks: File body in order.
+        max_bytes: Maximum accepted size, when the caller set one.
 
     Returns:
         Byte count and lowercase digest of the bytes that were written.
+
+    Raises:
+        DownloadError: If the stream grows past ``max_bytes``.
     """
     digest = hashlib.sha256()
     size = 0
     with temporary.open("wb") as handle:
         for chunk in chunks:
-            if not chunk:
-                continue
-
-            handle.write(chunk)
-            digest.update(chunk)
-            size += len(chunk)
+            size = _accept_chunk(handle, digest, size, chunk, max_bytes)
 
         handle.flush()
         os.fsync(handle.fileno())
 
     return size, digest.hexdigest()
+
+
+def _accept_chunk(
+    handle: BinaryIO,
+    digest: Any,
+    size: int,
+    chunk: bytes,
+    max_bytes: int | None,
+) -> int:
+    """Write one chunk when it fits under ``max_bytes``.
+
+    Args:
+        handle: Binary file opened for writing.
+        digest: Running SHA-256.
+        size: Bytes already accepted.
+        chunk: Next body chunk. Empty chunks are ignored.
+        max_bytes: Maximum accepted size, when set.
+
+    Returns:
+        The updated byte count.
+
+    Raises:
+        DownloadError: If accepting ``chunk`` would pass ``max_bytes``.
+    """
+    if not chunk:
+        return size
+
+    updated = size + len(chunk)
+    if max_bytes is not None and updated > max_bytes:
+        raise DownloadError(f"Download exceeds max_bytes ({max_bytes})")
+
+    handle.write(chunk)
+    digest.update(chunk)
+    return updated
 
 
 def _assert_complete(
@@ -300,9 +354,58 @@ def _write_sidecar(destination: Path, file_hash: str) -> None:
         file_hash: Digest to record.
     """
     sidecar = Path(str(destination) + ".sha256")
-    sidecar_tmp = Path(str(sidecar) + ".downloading")
+    sidecar_tmp = Path(str(sidecar) + "." + _partial_name("part"))
     sidecar_tmp.write_text(f"{file_hash}\n", encoding="utf-8")
     os.replace(sidecar_tmp, sidecar)
+
+
+def _partial_name(name: str) -> str:
+    """Return a temporary name that no other writer will open.
+
+    Args:
+        name: Final file name.
+
+    Returns:
+        ``<name>.downloading.<pid>.<uuid>``.
+    """
+    return f"{name}.downloading.{os.getpid()}.{uuid.uuid4().hex}"
+
+
+def _reject_declared_size(name: str, expected_size: int | None, max_bytes: int | None) -> None:
+    """Reject a content length that is already over the cap.
+
+    Args:
+        name: Artifact file name used in the error.
+        expected_size: Declared length, when the caller has one.
+        max_bytes: Maximum accepted size, when set.
+
+    Raises:
+        DownloadError: If ``expected_size`` is greater than ``max_bytes``.
+    """
+    if max_bytes is None or expected_size is None or expected_size <= max_bytes:
+        return
+
+    raise DownloadError(
+        f"Artifact {name} is {expected_size} bytes, above max_bytes ({max_bytes})",
+    )
+
+
+@contextmanager
+def _exclusive_lock(path: Path) -> Iterator[None]:
+    """Hold an exclusive advisory lock for the duration of a publish.
+
+    Args:
+        path: Lock file created beside the artifact.
+
+    Yields:
+        Nothing. The lock is released when the block exits.
+    """
+    with path.open("a+b") as handle:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
 def _cache_file_ready(path: Path) -> bool:
@@ -318,19 +421,38 @@ def _cache_file_ready(path: Path) -> bool:
     return not partial.exists() and path.is_file() and path.stat().st_size > 0
 
 
-def _sidecar_matches(path: Path, actual: str) -> bool:
-    """Return whether a checksum sidecar agrees with ``actual``.
+def _sidecar_digest(path: Path) -> str | None:
+    """Return the digest recorded beside ``path``.
 
     Args:
         path: Artifact path.
-        actual: Digest of the bytes on disk.
 
     Returns:
-        True when no sidecar exists or its first field equals ``actual``.
+        The lowercase digest, or ``None`` when no sidecar exists.
     """
     sidecar = Path(str(path) + ".sha256")
     if not sidecar.is_file():
-        return True
+        return None
 
     recorded = sidecar.read_text(encoding="utf-8").strip().split()
-    return bool(recorded) and recorded[0].lower() == actual
+    if not recorded:
+        return None
+
+    return recorded[0].lower()
+
+
+def _digest_ok(actual: str, recorded: str | None, expected: str | None) -> bool:
+    """Return whether the file digest agrees with the sidecar and the caller.
+
+    Args:
+        actual: Digest of the bytes on disk.
+        recorded: Sidecar digest, when one exists.
+        expected: Digest required by the caller, when one was supplied.
+
+    Returns:
+        True when both constraints that exist are satisfied.
+    """
+    if recorded is not None and recorded != actual:
+        return False
+
+    return expected is None or actual == expected

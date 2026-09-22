@@ -182,6 +182,39 @@ def test_unleash_without_private_token(tmp_path: Path) -> None:
     assert mock.header(0, "unleash-appname") == "qa"
 
 
+def test_gradual_rollout_percentage(tmp_path: Path) -> None:
+    """A zero percent rollout does not resolve, and 100 percent does for a user."""
+
+    def flag(percentage: str) -> dict[str, object]:
+        return {
+            "name": "model_route",
+            "active": True,
+            "strategies": [
+                {
+                    "name": "gradualRolloutUserId",
+                    "parameters": {"percentage": percentage, "groupId": "model_route"},
+                },
+            ],
+            "description": '{"model_name": "fraud", "version": "v1"}',
+        }
+
+    mock = GitLabMock()
+    mock.push("GET", _REST, json_body=flag("0"))
+    mock.push("GET", _REST, json_body=flag("100"))
+    mock.add("GET", _REST, json_body=flag("100"))
+    client = mock.client()
+    with client, ModelFetcher(token="test-token", cache_dir=tmp_path, client=client) as fetcher:
+        blocked = fetcher.get_feature_flag(42, "model_route", context={"user_id": "alice"})
+        allowed = fetcher.get_feature_flag(42, "model_route", context={"user_id": "alice"})
+        anonymous = fetcher.get_feature_flag(42, "model_route")
+
+    assert blocked.is_enabled is False
+    assert blocked.resolved_model is None
+    assert allowed.is_enabled is True
+    assert allowed.resolved_model is not None
+    assert anonymous.is_enabled is False
+
+
 def test_flag_unauthorized(tmp_path: Path) -> None:
     """A 401 from the feature-flag API is an authentication error."""
     mock = GitLabMock()

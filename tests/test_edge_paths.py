@@ -413,7 +413,7 @@ def test_pagination_limits_and_generic_fallback(tmp_path: Path) -> None:
     pages = GitLabMock()
     pages.add("GET", _VERSION, status=404, json_body={"message": ["missing", {"id": 1}]})
     for index in range(_MAX_PAGES):
-        body: list[dict[str, object]] = [{"id": 3, "name": "fraud"}] if index == 0 else []
+        body: list[dict[str, object]] = [{"id": 3, "name": "other"}] if index == 0 else []
         pages.push("GET", _MODELS, json_body=body, headers={"x-next-page": str(index + 2)})
 
     client, fetcher = _fetcher(pages, tmp_path)

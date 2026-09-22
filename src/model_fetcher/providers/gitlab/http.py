@@ -1,6 +1,7 @@
 """Shared GitLab HTTP calls for registry and feature-flag providers."""
 
-from collections.abc import Iterator
+import time
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from typing import Any
 from urllib.parse import quote
@@ -12,6 +13,9 @@ from model_fetcher.exceptions import AuthenticationError, DownloadError
 
 _MAX_PAGES = 20
 _MAX_REDIRECTS = 20
+_MAX_ATTEMPTS = 3
+_RETRY_STATUSES = frozenset({500, 502, 503, 504})
+_BACKOFF_SECONDS = (0.05, 0.1)
 _ERROR_TEXT_LIMIT = 300
 _PAGE_HEADER_LIMIT = 6
 _REDIRECT_STATUSES = frozenset({301, 302, 303, 307, 308})
@@ -326,6 +330,154 @@ def _without_credentials(headers: dict[str, str]) -> dict[str, str]:
     return {key: value for key, value in headers.items() if key.lower() not in _CREDENTIAL_HEADERS}
 
 
+def _page_selected(until: Callable[[list[Any]], bool] | None, payload: list[Any]) -> bool:
+    """Return whether pagination should stop after this page.
+
+    Args:
+        until: Optional predicate supplied by the caller.
+        payload: One page of JSON objects.
+
+    Returns:
+        True when ``until`` accepts the page.
+    """
+    return until is not None and until(payload)
+
+
+def _pause(attempt: int) -> None:
+    """Wait before another try.
+
+    Args:
+        attempt: Zero-based index of the attempt that just failed.
+    """
+    if attempt < len(_BACKOFF_SECONDS):
+        time.sleep(_BACKOFF_SECONDS[attempt])
+
+
+def _from_gitlab(response: httpx.Response, base_url: str) -> bool:
+    """Return whether ``response`` was served by the configured GitLab origin.
+
+    Args:
+        response: Final response, after redirects.
+        base_url: Configured GitLab origin.
+
+    Returns:
+        True for that origin and for an HTTP to HTTPS upgrade of it.
+    """
+    return _retains_credentials(httpx.URL(base_url), response.url)
+
+
+def _send_with_retry(
+    client: httpx.Client,
+    url: httpx.URL,
+    headers: dict[str, str],
+    params: dict[str, Any] | None,
+    *,
+    stream: bool,
+    path: str,
+) -> httpx.Response:
+    """GET ``url``, retrying transport errors and transient GitLab 5xx responses.
+
+    Args:
+        client: Shared HTTP client.
+        url: Absolute GitLab URL.
+        headers: Request headers.
+        params: Query string for the first request of each attempt.
+        stream: When true, leave a successful body unread.
+        path: API path used in error messages.
+
+    Returns:
+        The final response.
+
+    Raises:
+        DownloadError: When every attempt fails or a redirect is refused.
+    """
+    for attempt in range(_MAX_ATTEMPTS):
+        response = _one_attempt(
+            client,
+            url,
+            headers,
+            params,
+            stream=stream,
+            path=path,
+            attempt=attempt,
+        )
+        if response is not None:
+            return response
+
+    raise DownloadError(f"GitLab request failed for {path}")
+
+
+def _one_attempt(
+    client: httpx.Client,
+    url: httpx.URL,
+    headers: dict[str, str],
+    params: dict[str, Any] | None,
+    *,
+    stream: bool,
+    path: str,
+    attempt: int,
+) -> httpx.Response | None:
+    """Send one attempt and return its response when it should not be retried.
+
+    Args:
+        client: Shared HTTP client.
+        url: Absolute GitLab URL.
+        headers: Request headers.
+        params: Query string for the first hop.
+        stream: When true, leave a kept body unread.
+        path: API path used in error messages.
+        attempt: Zero-based attempt index.
+
+    Returns:
+        The response to keep, or ``None`` when another attempt should run.
+
+    Raises:
+        DownloadError: When this was the last transport failure, or a redirect is refused.
+    """
+    try:
+        response = _follow_redirects(client, url, headers=headers, params=params, stream=stream)
+    except httpx.HTTPError as exc:
+        _give_up_or_wait(attempt, path, exc)
+        return None
+
+    if not _should_retry(response, attempt):
+        return response
+
+    response.close()
+    _pause(attempt)
+    return None
+
+
+def _should_retry(response: httpx.Response, attempt: int) -> bool:
+    """Return whether a response status is worth another attempt.
+
+    Args:
+        response: Completed response.
+        attempt: Zero-based attempt index.
+
+    Returns:
+        True for a transient 5xx status when attempts remain.
+    """
+    return response.status_code in _RETRY_STATUSES and attempt + 1 < _MAX_ATTEMPTS
+
+
+def _give_up_or_wait(attempt: int, path: str, exc: httpx.HTTPError) -> None:
+    """Raise on the last transport failure, otherwise wait.
+
+    Args:
+        attempt: Zero-based attempt index.
+        path: API path used in the error.
+        exc: Transport error from httpx.
+
+    Raises:
+        DownloadError: When no attempts remain.
+    """
+    if attempt + 1 >= _MAX_ATTEMPTS:
+        raise DownloadError(f"GitLab request failed for {path}: {exc}") from exc
+
+    _pause(attempt)
+
+
 def _next_page(header: str) -> int:
     """Parse a GitLab ``x-next-page`` header.
 
@@ -439,12 +591,19 @@ class GitLabHttp:
         self._raise_for_status(response)
         return self._decode_json(response)
 
-    def get_pages(self, path: str, *, params: dict[str, Any] | None = None) -> list[Any] | None:
+    def get_pages(
+        self,
+        path: str,
+        *,
+        params: dict[str, Any] | None = None,
+        until: Callable[[list[Any]], bool] | None = None,
+    ) -> list[Any] | None:
         """GET a paginated JSON list.
 
         Args:
             path: Absolute API path beginning with ``/api/``.
             params: Query string merged with page controls.
+            until: When set, stop after the first page for which this returns true.
 
         Returns:
             Combined page items, or ``None`` when the first page is 404.
@@ -470,6 +629,9 @@ class GitLabHttp:
                 raise DownloadError(f"Expected a JSON list from {path}")
 
             collected.extend(payload)
+            if _page_selected(until, payload):
+                return collected
+
             next_page = response.headers.get("x-next-page", "").strip()
             if not next_page:
                 return collected
@@ -490,20 +652,17 @@ class GitLabHttp:
             back from the model registry to the generic package registry.
 
         Raises:
-            AuthenticationError: On HTTP 401 or 403.
-            DownloadError: On transport failures or HTTP statuses other than 200 and 404.
+            AuthenticationError: On HTTP 401 or 403 from the GitLab origin.
+            DownloadError: On transport failures, cross-origin 401 or 403, or any other
+                HTTP status other than 200 and 404.
         """
         response = self._send(path, stream=True, accept="application/octet-stream")
         try:
-            if response.status_code in {401, 403}:
-                response.read()
-                raise AuthenticationError(_error_text(response))
-
             if response.status_code == 404:
                 response.read()
             elif response.status_code >= 400:
                 response.read()
-                raise DownloadError(_error_text(response))
+                self._raise_for_status(response)
 
             yield response
         except httpx.HTTPError as exc:
@@ -549,16 +708,7 @@ class GitLabHttp:
             headers.update(extra_headers)
 
         url = _gitlab_url(self._config.base_url, path)
-        try:
-            return _follow_redirects(
-                self._client,
-                url,
-                headers=headers,
-                params=params,
-                stream=stream,
-            )
-        except httpx.HTTPError as exc:
-            raise DownloadError(f"GitLab request failed for {path}: {exc}") from exc
+        return _send_with_retry(self._client, url, headers, params, stream=stream, path=path)
 
     def _raise_for_status(self, response: httpx.Response) -> None:
         """Raise the library error that matches an HTTP status.
@@ -567,10 +717,11 @@ class GitLabHttp:
             response: Completed response that is not a 404.
 
         Raises:
-            AuthenticationError: On HTTP 401 or 403.
-            DownloadError: On any other status of 400 or higher.
+            AuthenticationError: On HTTP 401 or 403 from the GitLab origin.
+            DownloadError: On any other status of 400 or higher, including a 401 or 403
+                from a redirect target on another host.
         """
-        if response.status_code in {401, 403}:
+        if response.status_code in {401, 403} and _from_gitlab(response, self._config.base_url):
             raise AuthenticationError(_error_text(response))
 
         if response.status_code >= 400:

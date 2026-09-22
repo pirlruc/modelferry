@@ -172,6 +172,7 @@ class FetcherConfig(BaseModel):
         token_header: GitLab header used to send ``token``.
         cache_dir: Root directory for cached artifacts.
         timeout: HTTP timeout in seconds applied to connect, read, and write.
+        max_bytes: Maximum artifact size. ``None`` does not cap downloads.
         unleash_instance_id: GitLab Unleash instance id, when feature flags use it.
         unleash_app_name: Unleash app name, normally the GitLab environment name.
     """
@@ -184,6 +185,7 @@ class FetcherConfig(BaseModel):
     token_header: TokenHeader
     cache_dir: Path
     timeout: float = Field(gt=0)
+    max_bytes: int | None = None
     unleash_instance_id: str | None = None
     unleash_app_name: str = _DEFAULT_APP_NAME
 
@@ -255,6 +257,28 @@ class FetcherConfig(BaseModel):
         """
         return _clean_url(value)
 
+    @field_validator("max_bytes")
+    @classmethod
+    def _max_bytes_positive(cls, value: int | None) -> int | None:
+        """Reject a non-positive download cap.
+
+        Args:
+            value: Optional maximum artifact size in bytes.
+
+        Returns:
+            The same value when it is unset or positive.
+
+        Raises:
+            ValueError: If the cap is zero or negative.
+        """
+        if value is None:
+            return None
+
+        if value <= 0:
+            raise ValueError("max_bytes must be positive")
+
+        return value
+
     @field_validator("cache_dir")
     @classmethod
     def _absolute_cache(cls, value: Path) -> Path:
@@ -277,6 +301,7 @@ class FetcherConfig(BaseModel):
         token: str | None = None,
         cache_dir: str | Path | None = None,
         timeout: float = 30.0,
+        max_bytes: int | None = None,
         unleash_instance_id: str | None = None,
         unleash_app_name: str | None = None,
     ) -> Self:
@@ -299,6 +324,7 @@ class FetcherConfig(BaseModel):
             token: Explicit access token.
             cache_dir: Explicit cache directory.
             timeout: HTTP timeout in seconds.
+            max_bytes: Optional maximum artifact size in bytes.
             unleash_instance_id: Explicit Unleash instance id.
             unleash_app_name: Explicit Unleash application or environment name.
 
@@ -324,6 +350,7 @@ class FetcherConfig(BaseModel):
             token_header=header,
             cache_dir=resolved_cache,
             timeout=timeout,
+            max_bytes=max_bytes,
             unleash_instance_id=resolved_instance,
             unleash_app_name=resolved_app,
         )

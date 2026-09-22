@@ -78,7 +78,10 @@ class GitLabRegistryProvider(BaseRegistryProvider):
         if found is not None:
             return found
 
-        models = self._http.get_pages(f"/api/v4/projects/{project}/ml/models")
+        models = self._http.get_pages(
+            f"/api/v4/projects/{project}/ml/models",
+            until=lambda page: _page_has_name(page, coordinates.model_name),
+        )
         model = _find_named(models, coordinates.model_name)
         if model is None or "id" not in model:
             raise ModelNotFoundError(
@@ -447,6 +450,7 @@ class GitLabRegistryProvider(BaseRegistryProvider):
                 _iter_bytes(response),
                 expected_sha256=digest,
                 expected_size=expected_size,
+                max_bytes=self._config.max_bytes,
             )
 
     def _lookup(
@@ -522,6 +526,19 @@ def _match_version(payload: Any, version: str) -> dict[str, Any] | None:
             return payload
 
     return _find_version(payload if isinstance(payload, list) else None, version)
+
+
+def _page_has_name(page: list[Any], name: str) -> bool:
+    """Return whether a model list page contains ``name``.
+
+    Args:
+        page: One page of model objects.
+        name: Expected model name.
+
+    Returns:
+        True when a dictionary on the page has that name.
+    """
+    return any(isinstance(item, dict) and item.get("name") == name for item in page)
 
 
 def _find_named(items: list[Any] | None, name: str) -> dict[str, Any] | None:

@@ -13,6 +13,7 @@ from typing import Any, TypeGuard
 from model_fetcher.config import FetcherConfig
 from model_fetcher.exceptions import FeatureFlagError
 from model_fetcher.models import ModelCoordinates
+from model_fetcher.providers.gitlab.rollout import rollout_matches
 
 logger = logging.getLogger(__name__)
 
@@ -197,7 +198,8 @@ def _strategy_matches(strategy: dict[str, Any], context: dict[str, Any]) -> bool
     """Return whether a strategy applies to the evaluation context.
 
     ``default`` strategies apply to every user. ``userWithId`` applies when
-    ``context['user_id']`` is listed. Environment scopes must include the requested
+    ``context['user_id']`` is listed. ``gradualRolloutUserId`` applies when that
+    user falls inside the percentage. Environment scopes must include the requested
     environment or ``*`` when the caller passed ``environment``.
 
     Args:
@@ -210,9 +212,39 @@ def _strategy_matches(strategy: dict[str, Any], context: dict[str, Any]) -> bool
     if not _environment_matches(strategy, context.get("environment")):
         return False
 
-    if strategy.get("name") != "userWithId":
-        return True
+    return _strategy_rule(strategy, context)
 
+
+def _strategy_rule(strategy: dict[str, Any], context: dict[str, Any]) -> bool:
+    """Apply the strategy name after the environment scope has matched.
+
+    Args:
+        strategy: One strategy object.
+        context: Evaluation context.
+
+    Returns:
+        True when this strategy should be considered.
+    """
+    name = strategy.get("name")
+    if name == "userWithId":
+        return _user_ids_match(strategy, context)
+
+    if name == "gradualRolloutUserId":
+        return rollout_matches(strategy, context)
+
+    return True
+
+
+def _user_ids_match(strategy: dict[str, Any], context: dict[str, Any]) -> bool:
+    """Return whether ``context['user_id']`` is listed on a ``userWithId`` strategy.
+
+    Args:
+        strategy: Strategy whose parameters may contain ``userIds``.
+        context: Evaluation context.
+
+    Returns:
+        True when the user id is in the comma-separated list.
+    """
     user_id = context.get("user_id")
     if not isinstance(user_id, str) or not user_id:
         return False
