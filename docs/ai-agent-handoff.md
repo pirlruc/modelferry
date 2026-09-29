@@ -49,6 +49,10 @@ uv build
 
 ## Known pitfalls
 
+- A fine-grained token can show `permissions.push: true` on `GET /repos/...` because that
+  object is the user, not the token. Creating a git blob still returns HTTP 403
+  (`Resource not accessible by personal access token`). That blocked publishing
+  `docs/issues.yml` on the sibling repos.
 - Project paths must stay percent-encoded (`group%2Fapp`). `GitLabHttp` sets `raw_path` so httpx
   does not turn `%2F` into a slash.
 - Unleash calls do not require `GITLAB_TOKEN`. Registry downloads do.
@@ -67,9 +71,46 @@ Open epics in `docs/issues.yml` under Phase 2 — Operate and harden:
 - `GH-001` — GitHub Releases provider
 - `NODE-001` — remove `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` after the action audit
 
+Sibling `docs/issues.yml` updates were authored and not pushed. The available tokens
+read those private repos, and the repository API reports `push`, but creating a git
+blob returns HTTP 403 (`Resource not accessible by personal access token`). Apply
+these epics from a credential that can push:
+
+| Repo | Epic | Why |
+| --- | --- | --- |
+| [github-scaffold](https://github.com/pirlruc/github-scaffold) | `GS-PY-CALL` | Seed opt-in `templates/ci-python.yml` after pydevops accepts a checkout token. Do not seed it through `sync-templates.sh`. |
+| [guardrails](https://github.com/pirlruc/guardrails) | `GR-PY-REF` | Name pydevops `python-quality` in the CI reference implementations. |
+| [pydevops](https://github.com/pirlruc/pydevops) | `PDO-CHKOUT-001` | Add `checkout_token` to `python-quality.yml` so a private caller can fetch the scripts. |
+| pydevops | `PDO-PIN-018` | Gitlinks are still guardrails `77cf16eb` (1.6.0) and scaffold `9e04ed53` (1.5.0). |
+| [commondevops](https://github.com/pirlruc/commondevops) | `CMN-PIN-018` | Same gitlink lag as pydevops. |
+| commondevops | `CMN-DOC-CALL` | `common-doc-verify` should also look in `.github/scaffold/scripts` when `scripts/` copies are absent, and still fail closed if neither exists. |
+| [cppdevops](https://github.com/pirlruc/cppdevops) | `CPP-PIN-018` | Same gitlink lag. That manifest uses 2-space epic indent. |
+| [containerdevops](https://github.com/pirlruc/containerdevops) | `CDO-PIN-018` | Same gitlink lag. |
+
+Not filed: scaffold `main` already defaults guardrails 1.8.0 and scaffold 1.7.0;
+`GS-RECON-001` already tracks the commondevops caller pin; tags commondevops
+5.1.2, cppdevops 3.1.2, and containerdevops 5.0.4 intentionally have no GitHub
+Release.
+
 ______________________________________________________________________
 
 ## Log entries (newest first)
+
+### 2026-09-29 (UTC) — Sibling issue manifests could not be pushed
+
+**Trigger:** Add issues on github-scaffold, guardrails, pydevops, commondevops,
+cppdevops, and containerdevops for the gaps found while pinning this repo.
+
+**Actions:** Appended epics to each repo's `docs/issues.yml` in local clones and
+validated the YAML. `github-scaffold` was committed locally as `7345e89` on
+`cursor/issue-followups-2781`. `git push` and `POST /git/blobs` both returned
+HTTP 403 for `CURSOR_REPO_READ_TOKEN` and `CURSOR_UPDATE_ISSUE_TOKEN`.
+
+**Outcome:** No sibling pull request exists. The epic ids and rationale are in
+Suggested next work above. This repo's pin and callers are unchanged.
+
+**Follow-ups:** A credential with contents write on those repos should commit
+the drafted manifests. Do not `gh issue create`.
 
 ### 2026-09-29 (UTC) — Guardrails 1.8.0, scaffold 1.7.0, commondevops callers
 
@@ -92,8 +133,8 @@ without a token input.
 **Follow-ups:**
 
 - `OPS-001` and `CIREUSE-001-T2` still gate green CI on main.
-- Sibling repos get their own issue-manifest PRs for the pin and caller gaps found
-  while comparing releases.
+- Sibling manifests are drafted and unpublished. See the later log entry and
+  Suggested next work.
 
 ### 2026-09-22 (UTC) — Cache publish stays consistent under the lock
 
