@@ -1,9 +1,14 @@
 """HTTP fixtures for GitLab provider tests."""
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 import httpx
+
+from model_fetcher import ModelFetcher
 
 
 @dataclass
@@ -136,3 +141,38 @@ class GitLabMock:
             return value
 
         return None
+
+
+@contextmanager
+def open_fetcher(
+    mock: GitLabMock,
+    tmp_path: Path,
+    *,
+    token: str | None = None,
+    unleash_instance_id: str = "instance-1",
+    **settings: Any,
+) -> Iterator[ModelFetcher]:
+    """Open a fetcher on this mock and close the HTTP client with it.
+
+    Args:
+        mock: Scripted GitLab transport.
+        tmp_path: Cache directory.
+        token: GitLab token. ``None`` leaves the fetcher without one.
+        unleash_instance_id: Unleash client id sent on flag reads.
+        **settings: Extra ``ModelFetcher`` arguments.
+
+    Yields:
+        The open fetcher.
+    """
+    client = mock.client()
+    with (
+        client,
+        ModelFetcher(
+            cache_dir=tmp_path,
+            client=client,
+            token=token,
+            unleash_instance_id=unleash_instance_id,
+            **settings,
+        ) as fetcher,
+    ):
+        yield fetcher

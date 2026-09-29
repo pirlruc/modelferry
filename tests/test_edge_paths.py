@@ -3,8 +3,6 @@
 These cases exist so statement and branch coverage stay at the org floors.
 """
 
-# pylint: disable=duplicate-code
-
 import hashlib
 from collections.abc import Iterator
 from pathlib import Path
@@ -41,7 +39,7 @@ from model_fetcher.providers.gitlab.flag_eval import (
 from model_fetcher.providers.gitlab.flags import GitLabFlagProvider
 from model_fetcher.providers.gitlab.http import _MAX_PAGES
 from model_fetcher.providers.gitlab.registry import GitLabRegistryProvider
-from tests.support import GitLabMock
+from tests.support import GitLabMock, open_fetcher
 
 _PAYLOAD = b"model-bytes"
 _DIGEST = hashlib.sha256(_PAYLOAD).hexdigest()
@@ -336,16 +334,7 @@ def test_unleash_errors_and_missing_credentials(tmp_path: Path) -> None:
     mock.push("GET", _UNLEASH, json_body={"features": {}})
     mock.push("GET", _UNLEASH, json_body={"features": [{"name": "other"}]})
     mock.add("GET", _REST, json_body="not-an-object")
-    client = mock.client()
-    with (
-        client,
-        ModelFetcher(
-            token="test-token",
-            cache_dir=tmp_path,
-            client=client,
-            unleash_instance_id="instance-1",
-        ) as fetcher,
-    ):
+    with open_fetcher(mock, tmp_path, token="test-token") as fetcher:
         with pytest.raises(FeatureFlagError, match="unexpected"):
             fetcher.get_feature_flag(42, "model_route")
 
@@ -533,15 +522,8 @@ def test_unleash_miss_without_a_token_returns_not_found(tmp_path: Path) -> None:
     """An Unleash miss cannot fall back to REST when no token is configured."""
     mock = GitLabMock()
     mock.add("GET", _UNLEASH, json_body={"features": [{"name": "other"}]})
-    client = mock.client()
     with (
-        client,
-        ModelFetcher(
-            token=None,
-            cache_dir=tmp_path,
-            client=client,
-            unleash_instance_id="instance-1",
-        ) as fetcher,
+        open_fetcher(mock, tmp_path, token=None) as fetcher,
         pytest.raises(FeatureFlagError, match="was not found"),
     ):
         fetcher.get_feature_flag(42, "model_route")

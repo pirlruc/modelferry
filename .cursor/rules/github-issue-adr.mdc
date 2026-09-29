@@ -5,7 +5,7 @@ alwaysApply: true
 
 # github-issue-adr methodology
 
-[github-issue-adr](https://github.com/pirlruc/methodologies/tree/1.5.0/github-issue-adr) is the methodology for every
+[github-issue-adr](https://github.com/pirlruc/methodologies/tree/1.6.0/github-issue-adr) is the methodology for every
 repo carrying this scaffold. Do not introduce a second decision-record format alongside it.
 
 ## Core model
@@ -21,6 +21,7 @@ Applies to **new** issues only. Existing issues are not retroactively reformatte
 
 ## Rules
 
+- New Epic issues include a **Decision (Y-statement)**: `In the context of <use case>, facing <concern>, we decided <option>, to achieve <benefit>, accepting <trade-off>.` Standard Tasks do not. Do not rewrite an existing issue only to add one.
 - Do not create `docs/adr/` or `decisions/` markdown trees. If a decision needs recording, it is an Epic.
 - Do not maintain task checklists in the Epic body — they drift from the sub-issues. Use native sub-issue linking.
 - Title IDs are stable and cited everywhere: `Epic: [TOOL-001] …`, `Task: [TOOL-001-T1] …`.

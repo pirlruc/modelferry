@@ -17,7 +17,7 @@ from model_fetcher.providers.gitlab.flag_eval import (
 from model_fetcher.providers.gitlab.http import GitLabHttp, project_path
 
 
-class GitLabFlagProvider(BaseFlagProvider):
+class GitLabFlagProvider(BaseFlagProvider):  # pylint: disable=too-few-public-methods
     """Resolve model coordinates from a GitLab feature flag.
 
     When ``GITLAB_UNLEASH_INSTANCE_ID`` or ``unleash_instance_id`` is set, the

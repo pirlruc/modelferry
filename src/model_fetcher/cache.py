@@ -211,14 +211,15 @@ class CacheManager:
         _reject_declared_size(destination.name, expected_size, max_bytes)
         destination.parent.mkdir(parents=True, exist_ok=True)
         temporary = destination.with_name(_partial_name(destination.name))
+        published = False
         try:
             size, file_hash = _stream_to(temporary, chunks, max_bytes=max_bytes)
             _assert_complete(destination.name, size, file_hash, expected, expected_size)
             _publish(destination, temporary, file_hash)
-        except Exception:  # pylint: disable=broad-exception-caught
-            # The caller-supplied stream can fail in provider-specific ways.
-            temporary.unlink(missing_ok=True)
-            raise
+            published = True
+        finally:
+            if not published:
+                temporary.unlink(missing_ok=True)
 
         return DownloadResult(
             local_path=destination,

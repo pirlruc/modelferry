@@ -18,7 +18,7 @@ entry should include:
 Do not log purely informational chat with no repo impact unless the user asks to record it.
 
 Issue methodology:
-[github-issue-adr](https://github.com/pirlruc/methodologies/tree/1.5.0/github-issue-adr). Epics in
+[github-issue-adr](https://github.com/pirlruc/methodologies/tree/1.7.0/github-issue-adr). Epics in
 [`docs/issues.yml`](issues.yml) are the decision records. Do not add `docs/adr/`.
 
 ## Delivery status
@@ -29,8 +29,9 @@ Issue methodology:
 | GitLab registry + generic package download       | Implemented                                        |
 | GitLab Unleash and REST flag resolution          | Implemented                                        |
 | Live GitHub epic issues                          | Not created. The available token gets HTTP 403 on issue creation. The backlog is `docs/issues.yml`. |
-| `docs/guardrails`                                | Gitlink tag 1.6.0 (`584b209`)                      |
-| `.github/scaffold`                               | Gitlink tag 1.5.0 (`6f33f78`)                      |
+| `docs/guardrails`                                | Gitlink tag 1.8.0 (`aa5184c`)                      |
+| `.github/scaffold`                               | Gitlink tag 1.7.0 (`e76bb3f`)                      |
+| commondevops callers                             | Tag 5.1.2 commit `b3c462be` (infra lint, supply chain) |
 
 ## Commands
 
@@ -60,6 +61,7 @@ uv build
 Open epics in `docs/issues.yml` under Phase 2 — Operate and harden:
 
 - `OPS-001` — Actions secret `GUARDRAILS_READ_TOKEN`
+- `CIREUSE-001` — Actions secret `COMMONDEVOPS_READ_TOKEN` (callers are already pinned)
 - `REL-001` — PyPI Trusted Publishing
 - `REL-002` — Dependabot credential for the private submodules
 - `GH-001` — GitHub Releases provider
@@ -68,6 +70,30 @@ Open epics in `docs/issues.yml` under Phase 2 — Operate and harden:
 ______________________________________________________________________
 
 ## Log entries (newest first)
+
+### 2026-09-29 (UTC) — Guardrails 1.8.0, scaffold 1.7.0, commondevops callers
+
+**Trigger:** Bump guardrails using github-issue-adr, use the newest scaffold release,
+follow the commondevops submodule pin, reuse ops jobs, and cut deviations and
+exclusions.
+
+**Actions:** Moved `docs/guardrails` to tag 1.8.0 and `.github/scaffold` to tag 1.7.0,
+then ran `sync-templates.sh`. Added `ci-infra.yml` and `ci-supply-chain.yml` pinned at
+commondevops `b3c462be` (tag 5.1.2). Secret-backed jobs skip `dependabot[bot]` (CI-024).
+Removed the coverage `pragma`, the broad `except`, the global pylint suppression, and
+the test duplicate-code suppression. mypy is `strict`. Recorded `GRD-002` (done) and
+`CIREUSE-001` (open on the new secret).
+
+**Outcome:** Python floors in 1.8.0 match 1.6.0, so no numeric gate moved. Deviations
+stay an empty list. cppdevops and containerdevops jobs do not apply. pydevops
+`python-quality.yml` is not called because it cannot check out private pydevops
+without a token input.
+
+**Follow-ups:**
+
+- `OPS-001` and `CIREUSE-001-T2` still gate green CI on main.
+- Sibling repos get their own issue-manifest PRs for the pin and caller gaps found
+  while comparing releases.
 
 ### 2026-09-22 (UTC) — Cache publish stays consistent under the lock
 
@@ -212,4 +238,4 @@ quality gates from public pymjolnir.
 
 ______________________________________________________________________
 
-*Last updated: 2026-09-21 UTC.*
+*Last updated: 2026-09-29 UTC.*

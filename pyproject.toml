@@ -72,7 +72,7 @@ no_implicit_optional = true
 plugins = ["pydantic.mypy"]
 python_version = "3.13"
 show_error_codes = true
-strict = false
+strict = true
 warn_return_any = true
 warn_unused_configs = true
 
@@ -105,11 +105,6 @@ max-line-length = 100
 ignore = [".venv", "build", "dist"]
 py-version = "3.13"
 source-roots = ["src"]
-
-[tool.pylint.messages_control]
-disable = [
-  "too-few-public-methods",
-]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

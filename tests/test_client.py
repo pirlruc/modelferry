@@ -3,13 +3,14 @@
 import ast
 import hashlib
 import json
+from importlib.metadata import PackageNotFoundError
 from pathlib import Path
 from typing import Any
 
 import httpx
 import pytest
 
-from model_fetcher import ModelFetcher, register_provider
+from model_fetcher import ModelFetcher, _distribution_version, register_provider
 from model_fetcher.base import BaseFlagProvider, BaseRegistryProvider
 from model_fetcher.client import _PROVIDERS
 from model_fetcher.exceptions import FeatureFlagError, ProviderNotSupportedError
@@ -25,6 +26,18 @@ def _description_payload() -> str:
     return json.dumps(
         {"model_name": "fraud_detector", "version": "v1.4.0", "file_name": "model.onnx"},
     )
+
+
+def test_distribution_version_falls_back_when_metadata_is_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The import fallback stays covered without uninstalling the package."""
+
+    def _missing(_name: str) -> str:
+        raise PackageNotFoundError
+
+    monkeypatch.setattr("model_fetcher.version", _missing)
+    assert _distribution_version() == "0.1.0"
 
 
 def test_download_from_feature_flag_uses_the_payload(tmp_path: Path) -> None:
@@ -117,7 +130,7 @@ def test_register_provider_extends_the_facade(tmp_path: Path) -> None:
         def get_version_metadata(self, coordinates: ModelCoordinates) -> dict[str, Any]:
             return {"version": coordinates.version}
 
-    class ExampleFlags(BaseFlagProvider):
+    class ExampleFlags(BaseFlagProvider):  # pylint: disable=too-few-public-methods
         """Flag double used to prove the extension hook."""
 
         name = "example"

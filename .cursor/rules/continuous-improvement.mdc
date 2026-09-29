@@ -15,7 +15,7 @@ Refresh the prompt in the same session if any of the following change:
 
 | Trigger | Example |
 |---------|---------|
-| Surface the prompt reviews | Scripts, templates, Cursor rules, language packs, process docs, reusable workflows, CI toolchain Dockerfiles |
+| Surface the prompt reviews | Scripts, templates, Cursor rules, agent instructions, language packs, process docs, reusable workflows, CI toolchain Dockerfiles |
 | Pin or schema drift | Methodology/guardrails pin bump; `docs/issues-schema.md`; label vocabulary |
 | Automation contract | Output shape, tool allowlist, or trigger assumptions |
 

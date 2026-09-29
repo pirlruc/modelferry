@@ -1,5 +1,8 @@
 ---
 name: Security
+# PY-SEC-002/003/004 stay here. pydevops python-quality.yml@2.1.1 has no
+# checkout token for its private script checkout, and common-secrets-sast
+# would repeat gitleaks and semgrep behind COMMONDEVOPS_READ_TOKEN.
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 on:
@@ -16,11 +19,12 @@ concurrency:
   cancel-in-progress: true
 jobs:
   security:
+    # CI-024: no Actions secret. This is the token-free job Dependabot can run.
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false

@@ -7,7 +7,7 @@ import pytest
 
 from model_fetcher import ModelFetcher
 from model_fetcher.exceptions import AuthenticationError, FeatureFlagError
-from tests.support import GitLabMock
+from tests.support import GitLabMock, open_fetcher
 
 _UNLEASH = "/api/v4/feature_flags/unleash/42/client/features"
 _REST = "/api/v4/projects/42/feature_flags/model_route"
@@ -43,16 +43,7 @@ def test_unleash_variant_payload_resolves_coordinates(tmp_path: Path) -> None:
             {"model_name": "fraud_detector", "version": "v1.4.0", "file_name": "model.onnx"},
         ),
     )
-    client = mock.client()
-    with (
-        client,
-        ModelFetcher(
-            token="test-token",
-            cache_dir=tmp_path,
-            client=client,
-            unleash_instance_id="instance-1",
-        ) as fetcher,
-    ):
+    with open_fetcher(mock, tmp_path, token="test-token") as fetcher:
         resolution = fetcher.get_feature_flag(42, "model_route", context={"user_id": "alice"})
 
     assert resolution.is_enabled is True
@@ -162,16 +153,7 @@ def test_unleash_without_private_token(tmp_path: Path) -> None:
         _UNLEASH,
         json_body=_variant_flag({"model_name": "fraud_detector", "version": "v9"}),
     )
-    client = mock.client()
-    with (
-        client,
-        ModelFetcher(
-            cache_dir=tmp_path,
-            client=client,
-            unleash_instance_id="instance-1",
-            unleash_app_name="staging",
-        ) as fetcher,
-    ):
+    with open_fetcher(mock, tmp_path, unleash_app_name="staging") as fetcher:
         resolution = fetcher.get_feature_flag(42, "model_route", context={"environment": "qa"})
         with pytest.raises(FeatureFlagError, match="header value"):
             fetcher.get_feature_flag(42, "model_route", context={"environment": "qa\r\nX: 1"})

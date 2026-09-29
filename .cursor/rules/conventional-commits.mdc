@@ -65,3 +65,4 @@ message style when in doubt.
 - Approval gates and branch naming: [agent-workflow.mdc](agent-workflow.mdc)
 - Issue methodology: [github-issue-adr.mdc](github-issue-adr.mdc)
 - Handoff hygiene: [ai-agent-handoff.mdc](ai-agent-handoff.mdc)
+

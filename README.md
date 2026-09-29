@@ -133,13 +133,16 @@ uv run pre-commit install
 sh scripts/check-ci-local.sh
 ```
 
-`docs/guardrails` is pinned at tag 1.6.0 and `.github/scaffold` at tag 1.5.0. Local and CI gates
+`docs/guardrails` is pinned at tag 1.8.0 and `.github/scaffold` at tag 1.7.0. Local and CI gates
 read `docs/guardrails/python/profile.thresholds.yml`. CI needs an Actions secret named
-`GUARDRAILS_READ_TOKEN` that can read those private repositories.
+`GUARDRAILS_READ_TOKEN` that can read those private repositories. Infra lint and the
+supply-chain scan call
+[commondevops 5.1.2](https://github.com/pirlruc/commondevops/tree/b3c462bed0de4f6475e6be7875c4ababd831acc6)
+and need `COMMONDEVOPS_READ_TOKEN`.
 
 `uv build` produces the sdist and wheel. An annotated `vX.Y.Z` tag runs the Release workflow, which
 publishes a GitHub Release. That release publishes to PyPI with Trusted Publishing.
 
 Decisions are GitHub epics, not ADR markdown files. The backlog lives in `docs/issues.yml`.
 Methodology:
-[github-issue-adr](https://github.com/pirlruc/methodologies/tree/1.5.0/github-issue-adr).
+[github-issue-adr](https://github.com/pirlruc/methodologies/tree/1.7.0/github-issue-adr).

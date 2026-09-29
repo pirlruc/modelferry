@@ -1,0 +1,31 @@
+---
+name: Supply chain
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * 1'
+permissions: {}
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  supply-chain:
+    # commondevops 5.1.2 (CI-018 / CI-034 / CI-029). Syft, Grype, Trivy, grant.
+    # CI-024: the reusable checks out a private repo with an Actions secret.
+    if: github.actor != 'dependabot[bot]'
+    permissions:
+      contents: read
+      security-events: write
+    uses: pirlruc/commondevops/.github/workflows/common-supply-chain.yml@b3c462bed0de4f6475e6be7875c4ababd831acc6
+    with:
+      blocking: true
+      scripts_ref: b3c462bed0de4f6475e6be7875c4ababd831acc6
+      license_engine: grant
+      license_deny_list: '[]'
+    secrets:
+      checkout_token: ${{ secrets.COMMONDEVOPS_READ_TOKEN }}
