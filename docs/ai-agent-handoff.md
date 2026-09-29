@@ -97,6 +97,24 @@ ______________________________________________________________________
 
 ## Log entries (newest first)
 
+### 2026-09-29 (UTC) — CI no longer fetches github-scaffold
+
+**Trigger:** Quality, tests, and docs still failed after switching the scaffold
+fetch to `COMMONDEVOPS_READ_TOKEN`. That token is also HTTP 403 on
+`pirlruc/github-scaffold`. Guardrails checkout with `GUARDRAILS_READ_TOKEN`
+succeeds. Infra and supply-chain stay green.
+
+**Actions:** Those three workflows fetch only `docs/guardrails`. The markdown
+link linter is a snapshot of scaffold tag 1.7.0 under `scripts/lint-doc-links.py`
+and `scripts/doc_links/`, with `Returns` sections so ruff DOC201 passes.
+Complexity stays inside the floors (max CC 8, average 3.12).
+
+**Outcome:** Local ruff, shellcheck, complexity, and the link linter pass.
+GitHub still has to run quality, tests, and docs.
+
+**Follow-ups:** A token with contents read on `pirlruc/github-scaffold` can
+replace the vendored linter with a checkout of the gitlink.
+
 ### 2026-09-29 (UTC) — Scaffold checkout uses the commondevops token
 
 **Trigger:** Quality, tests, and docs failed after the secrets were added.

@@ -135,8 +135,10 @@ sh scripts/check-ci-local.sh
 
 `docs/guardrails` is pinned at tag 1.8.0 and `.github/scaffold` at tag 1.7.0. Local and CI gates
 read `docs/guardrails/python/profile.thresholds.yml`. CI needs an Actions secret named
-`GUARDRAILS_READ_TOKEN` that can read those private repositories. Infra lint and the
-supply-chain scan check out
+`GUARDRAILS_READ_TOKEN` reads the guardrails pin. That secret is denied on
+`pirlruc/github-scaffold`, and so is `COMMONDEVOPS_READ_TOKEN`, so CI uses the
+vendored link linter in `scripts/lint-doc-links.py` (scaffold tag 1.7.0). Infra
+lint and the supply-chain scan check out
 [commondevops 5.1.2](https://github.com/pirlruc/commondevops/tree/b3c462bed0de4f6475e6be7875c4ababd831acc6)
 with `COMMONDEVOPS_READ_TOKEN`. A public repository cannot call that private reusable
 workflow, so the jobs run the pinned scripts in place. pydevops is not called, and

@@ -27,7 +27,6 @@ jobs:
       - name: Checkout pinned guardrails and scaffold
         env:
           GUARDRAILS_READ_TOKEN: ${{ secrets.GUARDRAILS_READ_TOKEN }}
-          COMMONDEVOPS_READ_TOKEN: ${{ secrets.COMMONDEVOPS_READ_TOKEN }}
         run: sh scripts/checkout-private-submodules.sh
       - name: Set up Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
@@ -45,4 +44,4 @@ jobs:
           uv run interrogate --fail-under "${doc_coverage}" src/model_fetcher
           uv run pydoclint src/model_fetcher
       - name: Relative markdown links
-        run: uv run python .github/scaffold/scripts/lint-doc-links.py --root "$PWD"
+        run: uv run python scripts/lint-doc-links.py --root "$PWD"

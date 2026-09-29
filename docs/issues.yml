@@ -226,7 +226,10 @@ milestones:
           target: .github/workflows, scripts/checkout-private-submodules.sh
           modules: [model_fetcher]
         acceptance_criteria:
-          - GUARDRAILS_READ_TOKEN can read pirlruc/guardrails and pirlruc/github-scaffold.
+          - GUARDRAILS_READ_TOKEN can read pirlruc/guardrails.
+          - The markdown link linter is the scaffold 1.7.0 snapshot under scripts/,
+            because that secret and COMMONDEVOPS_READ_TOKEN are denied on
+            pirlruc/github-scaffold.
           - A push to main completes the quality, tests, and docs workflows.
         out_of_scope:
           - Copying the private repositories into this repo.
