@@ -28,11 +28,12 @@ Issue methodology:
 | Package `model-fetcher` / import `model_fetcher` | Implemented. Phase 1 is done. CACHE-002, GLREG-002, and GLFLG-002 are done. |
 | GitLab registry + generic package download       | Implemented                                        |
 | GitLab Unleash and REST flag resolution          | Implemented                                        |
-| Live GitHub epic issues                          | Not created. The available token gets HTTP 403 on issue creation. The backlog is `docs/issues.yml`. |
+| Live GitHub epic issues                          | Sibling epics opened with `CURSOR_UPDATE_ISSUE_TOKEN`. They still need a `docs/issues.yml` sync in those repos. |
 | `docs/guardrails`                                | Gitlink tag 1.8.0 (`aa5184c`)                      |
 | `.github/scaffold`                               | Gitlink tag 1.7.0 (`e76bb3f`)                      |
-| commondevops scripts                             | Tag 5.1.2 commit `b3c462be`, checked out with `COMMONDEVOPS_READ_TOKEN` |
-| Actions secrets                                  | `GUARDRAILS_READ_TOKEN` and `COMMONDEVOPS_READ_TOKEN` are on the repo |
+| commondevops callers                             | `uses:` tag 5.1.2 commit `b3c462be`, secret `COMMONDEVOPS_READ_TOKEN` |
+| pydevops caller                                  | `uses:` tag 2.1.1 commit `19fa370`. `PYDEVOPS_READ_TOKEN` is unused |
+| Actions secrets                                  | `GUARDRAILS_READ_TOKEN`, `COMMONDEVOPS_READ_TOKEN`, `PYDEVOPS_READ_TOKEN` |
 
 ## Commands
 
@@ -72,10 +73,9 @@ Open epics in `docs/issues.yml` under Phase 2 — Operate and harden:
 - `GH-001` — GitHub Releases provider
 - `NODE-001` — remove `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` after the action audit
 
-Sibling `docs/issues.yml` updates were authored and not pushed. The available tokens
-read those private repos, and the repository API reports `push`, but creating a git
-blob returns HTTP 403 (`Resource not accessible by personal access token`). Apply
-these epics from a credential that can push:
+Sibling epics are live GitHub issues (see the 2026-09-29 reusable-workflow log
+entry). `CURSOR_UPDATE_ISSUE_TOKEN` can create issues and cannot push
+`docs/issues.yml`. Each issue says to copy it into that repo's manifest:
 
 | Repo | Epic | Why |
 | --- | --- | --- |
@@ -96,6 +96,35 @@ Release.
 ______________________________________________________________________
 
 ## Log entries (newest first)
+
+### 2026-09-29 (UTC) — Call reusable ops workflows and open sibling issues
+
+**Trigger:** The ops repositories are public for now and will be private again.
+Reuse their workflows instead of checking the repositories out. `PYDEVOPS_READ_TOKEN`
+is on the repo. Issue tokens can create issues and cannot push `docs/issues.yml`.
+The About description was set by hand.
+
+**Actions:** `ci-infra.yml` and `ci-supply-chain.yml` call commondevops `b3c462be`
+and pass `COMMONDEVOPS_READ_TOKEN`. `ci-python.yml` calls pydevops `python-quality`
+at `19fa370` and does not pass `PYDEVOPS_READ_TOKEN`, because that workflow only
+accepts `caller_pat`. Opened epics and linked tasks on the sibling repositories.
+Each body says to sync the text into that repo's `docs/issues.yml`.
+
+**Outcome:** This repo does not check out commondevops, pydevops, cppdevops, or
+containerdevops. cppdevops and containerdevops are not called, so they have no
+token here. A public caller still cannot resolve `uses:` after those repositories
+become private; the read tokens do not fix workflow-file lookup.
+
+**Follow-ups:**
+
+- [pydevops#162](https://github.com/pirlruc/pydevops/issues/162) checkout token
+- [pydevops#164](https://github.com/pirlruc/pydevops/issues/164) pin bump
+- [github-scaffold#148](https://github.com/pirlruc/github-scaffold/issues/148) Python caller seed
+- [guardrails#183](https://github.com/pirlruc/guardrails/issues/183) cite pydevops
+- [commondevops#161](https://github.com/pirlruc/commondevops/issues/161) pin bump
+- [commondevops#163](https://github.com/pirlruc/commondevops/issues/163) doc-verify path
+- [cppdevops#83](https://github.com/pirlruc/cppdevops/issues/83) pin bump
+- [containerdevops#125](https://github.com/pirlruc/containerdevops/issues/125) pin bump
 
 ### 2026-09-29 (UTC) — CI no longer fetches github-scaffold
 

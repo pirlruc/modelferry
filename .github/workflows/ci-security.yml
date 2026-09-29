@@ -1,8 +1,9 @@
 ---
 name: Security
-# PY-SEC-002/003/004 stay here. pydevops python-quality.yml@2.1.1 has no
-# checkout token for its private script checkout, and common-secrets-sast
-# would repeat gitleaks and semgrep behind COMMONDEVOPS_READ_TOKEN.
+# PY-SEC-002/003/004 stay here as the token-free Dependabot job.
+# python-quality is called from ci-python.yml. It has no checkout_token
+# input, so PYDEVOPS_READ_TOKEN is not passed. common-secrets-sast would
+# repeat gitleaks and semgrep behind COMMONDEVOPS_READ_TOKEN.
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 on:

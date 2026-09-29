@@ -15,142 +15,18 @@ concurrency:
   cancel-in-progress: true
 jobs:
   supply-chain:
-    # Public callers cannot `uses:` a private reusable workflow. Scripts come
-    # from commondevops 5.1.2 at b3c462be via COMMONDEVOPS_READ_TOKEN
-    # (CI-018 / CI-034 / CI-029). CI-024: Dependabot cannot read that secret.
+    # commondevops 5.1.2 (CI-018 / CI-034 / CI-029). Reuse the workflow.
+    # COMMONDEVOPS_READ_TOKEN is passed for the private-repo script checkout.
+    # CI-024: Dependabot cannot read the secret.
     if: github.actor != 'dependabot[bot]'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
     permissions:
       contents: read
       security-events: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Checkout commondevops scripts
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: pirlruc/commondevops
-          ref: b3c462bed0de4f6475e6be7875c4ababd831acc6
-          token: ${{ secrets.COMMONDEVOPS_READ_TOKEN }}
-          persist-credentials: false
-          path: _commondevops
-          sparse-checkout: |
-            scripts
-          sparse-checkout-cone-mode: false
-
-      - name: Require vendored supply-chain thresholds
-        run: |
-          set -euo pipefail
-          thresholds="${GITHUB_WORKSPACE}/_commondevops/scripts/supply-chain.profile.thresholds.yml"
-          if [[ ! -f "${thresholds}" ]]; then
-            echo "::error::Missing vendored thresholds at ${thresholds}; failing closed (SC-LIC-001)."
-            exit 1
-          fi
-          echo "THRESHOLDS_PATH=${thresholds}" >> "${GITHUB_ENV}"
-          severity="$(bash _commondevops/scripts/read-thresholds.sh vuln_fail_on_severity "${thresholds}")"
-          {
-            echo "SEV_UP=$(printf '%s' "${severity}" | tr '[:lower:]' '[:upper:]')"
-            echo "SEV_LO=$(printf '%s' "${severity}" | tr '[:upper:]' '[:lower:]')"
-          } >> "${GITHUB_ENV}"
-
-      - name: Install tooling
-        env:
-          INSTALL_ONLY: syft,grype,trivy,grant
-        run: bash _commondevops/scripts/install-common-tools.sh
-
-      - name: Syft SBOM (CycloneDX + SPDX)
-        id: syft
-        continue-on-error: true
-        run: |
-          set -euo pipefail
-          mkdir -p scan-results
-          syft dir:. \
-            -o cyclonedx-json=scan-results/sbom-cdx.json \
-            -o spdx-json=scan-results/sbom-spdx.json
-
-      - name: Grype (SBOM)
-        id: grype
-        continue-on-error: true
-        run: |
-          set -euo pipefail
-          if [[ -z "${SEV_LO}" ]]; then
-            echo "empty vuln_fail_on_severity" >&2
-            exit 1
-          fi
-          config=()
-          if [[ -f .grype.yaml ]]; then
-            config=(--config .grype.yaml)
-          fi
-          if [[ -f scan-results/sbom-cdx.json ]]; then
-            grype "sbom:scan-results/sbom-cdx.json" "${config[@]}" --fail-on "${SEV_LO}" \
-              -o json=scan-results/grype.json
-          else
-            grype dir:. "${config[@]}" --fail-on "${SEV_LO}" -o json=scan-results/grype.json
-          fi
-
-      - name: Trivy filesystem
-        id: trivy
-        continue-on-error: true
-        run: |
-          set -euo pipefail
-          if [[ -z "${SEV_UP}" ]]; then
-            echo "empty vuln_fail_on_severity" >&2
-            exit 1
-          fi
-          mkdir -p scan-results
-          config=()
-          if [[ -f trivy.yaml ]]; then
-            config=(--config trivy.yaml)
-          fi
-          trivy fs --scanners vuln --severity "CRITICAL,${SEV_UP}" \
-            --format sarif --output scan-results/trivy.sarif \
-            "${config[@]}" .
-          trivy fs --scanners vuln --severity "CRITICAL,${SEV_UP}" \
-            --exit-code 1 "${config[@]}" .
-
-      - name: License gate (grant)
-        id: grant
-        continue-on-error: true
-        env:
-          GRANT_CONFIG_PATH: .grant.yaml
-        run: |
-          set -euo pipefail
-          python3 "${GITHUB_WORKSPACE}/_commondevops/scripts/generate_grant_config.py"
-          grant check scan-results/sbom-spdx.json --disable-file-search -c .grant.yaml
-
-      - name: Gate — supply-chain
-        if: always()
-        env:
-          ADVISORY: "false"
-          SYFT: ${{ steps.syft.outcome }}
-          GRYPE: ${{ steps.grype.outcome }}
-          TRIVY: ${{ steps.trivy.outcome }}
-          GRANT: ${{ steps.grant.outcome }}
-        run: |
-          set -euo pipefail
-          bash _commondevops/scripts/gate-aggregate.sh \
-            syft="${SYFT}" \
-            grype="${GRYPE}" \
-            trivy="${TRIVY}" \
-            grant="${GRANT}"
-
-      - name: Upload scan results
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: common-supply-chain-results
-          path: scan-results/
-          if-no-files-found: ignore
-          retention-days: 7
-
-      - name: Upload Trivy SARIF
-        if: always() && hashFiles('scan-results/trivy.sarif') != ''
-        continue-on-error: true
-        uses: github/codeql-action/upload-sarif@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.37.6
-        with:
-          sarif_file: scan-results/trivy.sarif
-          category: trivy-fs
+    uses: pirlruc/commondevops/.github/workflows/common-supply-chain.yml@b3c462bed0de4f6475e6be7875c4ababd831acc6
+    with:
+      blocking: true
+      scripts_ref: b3c462bed0de4f6475e6be7875c4ababd831acc6
+      license_engine: grant
+      license_deny_list: '[]'
+    secrets:
+      checkout_token: ${{ secrets.COMMONDEVOPS_READ_TOKEN }}

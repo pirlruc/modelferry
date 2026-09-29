@@ -138,11 +138,13 @@ read `docs/guardrails/python/profile.thresholds.yml`. CI needs an Actions secret
 `GUARDRAILS_READ_TOKEN` reads the guardrails pin. That secret is denied on
 `pirlruc/github-scaffold`, and so is `COMMONDEVOPS_READ_TOKEN`, so CI uses the
 vendored link linter in `scripts/lint-doc-links.py` (scaffold tag 1.7.0). Infra
-lint and the supply-chain scan check out
+lint and the supply-chain scan call
 [commondevops 5.1.2](https://github.com/pirlruc/commondevops/tree/b3c462bed0de4f6475e6be7875c4ababd831acc6)
-with `COMMONDEVOPS_READ_TOKEN`. A public repository cannot call that private reusable
-workflow, so the jobs run the pinned scripts in place. pydevops is not called, and
-this repository has no pydevops token.
+and pass `COMMONDEVOPS_READ_TOKEN`. Python quality calls
+[pydevops 2.1.1](https://github.com/pirlruc/pydevops/tree/19fa370f5f11bae423d4c0586080dbed32f9ddf8).
+`PYDEVOPS_READ_TOKEN` is present and unused: `python-quality.yml` has no checkout
+token input. This repository does not check out the ops repositories. cppdevops
+and containerdevops are not called, so they need no token here.
 
 `uv build` produces the sdist and wheel. An annotated `vX.Y.Z` tag runs the Release workflow, which
 publishes a GitHub Release. That release publishes to PyPI with Trusted Publishing.

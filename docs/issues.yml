@@ -555,34 +555,39 @@ milestones:
         status: open
         title: Reuse commondevops infra lint and supply-chain scans
         decision: >-
-          In the context of a public repository, facing private reusable
-          workflows that GitHub will not resolve from a public caller, we
-          decided to check out commondevops scripts at commit b3c462be with
-          COMMONDEVOPS_READ_TOKEN and run the same actionlint, shellcheck,
-          hadolint, zizmor, Syft, Grype, Trivy, and grant steps here, to
-          achieve those gates, accepting a job body in this repo because a
-          public caller cannot fetch a private workflow. Python
-          quality, tests, and SAST stay here. cppdevops, containerdevops, and
-          pydevops python-quality are not called.
+          In the context of the ops repositories being public for now and
+          private again later, facing callers that were checking those
+          repositories out, we decided to call the reusable workflows with
+          uses and to pass COMMONDEVOPS_READ_TOKEN as checkout_token, to
+          achieve infra lint and supply-chain scans without a checkout step
+          in this repo, accepting that a public caller cannot resolve a
+          private uses target once those repositories are private again.
+          python-quality is called at pydevops 2.1.1 commit 19fa370.
+          PYDEVOPS_READ_TOKEN is not passed because that workflow only
+          accepts caller_pat. cppdevops and containerdevops are not called.
         overview:
-          problem: Infra lint and filesystem supply-chain scans were not
-            running. A public caller cannot resolve a private reusable workflow,
-            and pydevops python-quality has no checkout token input.
-          goal: One commondevops SHA is checked out with COMMONDEVOPS_READ_TOKEN,
-            and Dependabot still has a token-free security job.
+          problem: Checking out an ops repository duplicates the reusable
+            workflow. python-quality has no secret input for a read token.
+          goal: This repo calls the pinned reusable workflows and does not
+            check out commondevops, pydevops, cppdevops, or containerdevops.
         architecture:
           target: .github/workflows/ci-infra.yml, .github/workflows/ci-supply-chain.yml
           modules: [model_fetcher]
         acceptance_criteria:
-          - ci-infra.yml and ci-supply-chain.yml check out commondevops at
-            b3c462be with COMMONDEVOPS_READ_TOKEN.
+          - ci-infra.yml and ci-supply-chain.yml call commondevops at
+            b3c462be with scripts_ref set to that same commit and pass
+            COMMONDEVOPS_READ_TOKEN.
+          - ci-python.yml calls pydevops python-quality at 19fa370 and does
+            not check that repository out.
           - Jobs that need GUARDRAILS_READ_TOKEN or COMMONDEVOPS_READ_TOKEN
             skip dependabot[bot].
           - The security workflow does not use an Actions secret.
         out_of_scope:
           - cppdevops workflows. This repository has no C++.
           - containerdevops workflows. This repository publishes no image.
-          - pydevops python-quality.yml until it accepts a checkout token.
+          - cppdevops and containerdevops stay out of scope. Passing
+            PYDEVOPS_READ_TOKEN waits until python-quality accepts a
+            checkout token secret.
         guardrail_refs:
           - CI-018
           - CI-024
