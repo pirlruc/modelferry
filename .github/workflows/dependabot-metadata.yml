@@ -10,7 +10,8 @@ jobs:
   metadata:
     name: Summarize Dependabot dependency update
     # This workflow intentionally skips maintainer-authored PRs.
-    if: github.actor == 'dependabot[bot]'
+    # login alone is spoofable (zizmor bot-conditions). 49699333 is dependabot[bot].
+    if: github.event.pull_request.user.login == 'dependabot[bot]' && github.event.pull_request.user.id == 49699333
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

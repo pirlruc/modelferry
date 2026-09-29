@@ -552,26 +552,27 @@ milestones:
         status: open
         title: Reuse commondevops infra lint and supply-chain scans
         decision: >-
-          In the context of duplicating shell and supply-chain jobs, facing
-          reusable workflows in commondevops 5.1.2, we decided to call
-          common-infra-lint and common-supply-chain at commit b3c462be and
-          to keep Python quality, tests, and SAST in this repo, to achieve
-          actionlint, zizmor, Syft, Grype, Trivy, and the grant license gate
-          without copying those job bodies, accepting a new Actions secret
-          COMMONDEVOPS_READ_TOKEN and that cppdevops, containerdevops, and
+          In the context of a public repository, facing private reusable
+          workflows that GitHub will not resolve from a public caller, we
+          decided to check out commondevops scripts at commit b3c462be with
+          COMMONDEVOPS_READ_TOKEN and run the same actionlint, shellcheck,
+          hadolint, zizmor, Syft, Grype, Trivy, and grant steps here, to
+          achieve those gates, accepting a job body in this repo because a
+          public caller cannot fetch a private workflow. Python
+          quality, tests, and SAST stay here. cppdevops, containerdevops, and
           pydevops python-quality are not called.
         overview:
           problem: Infra lint and filesystem supply-chain scans were not
-            running. The Python reusable cannot check out private pydevops
-            without a token input this caller cannot pass.
-          goal: Thin callers pin one commondevops SHA, and Dependabot still
-            has a token-free security job.
+            running. A public caller cannot resolve a private reusable workflow,
+            and pydevops python-quality has no checkout token input.
+          goal: One commondevops SHA is checked out with COMMONDEVOPS_READ_TOKEN,
+            and Dependabot still has a token-free security job.
         architecture:
           target: .github/workflows/ci-infra.yml, .github/workflows/ci-supply-chain.yml
           modules: [model_fetcher]
         acceptance_criteria:
-          - ci-infra.yml and ci-supply-chain.yml pin commondevops b3c462be
-            for both uses and scripts_ref.
+          - ci-infra.yml and ci-supply-chain.yml check out commondevops at
+            b3c462be with COMMONDEVOPS_READ_TOKEN.
           - Jobs that need GUARDRAILS_READ_TOKEN or COMMONDEVOPS_READ_TOKEN
             skip dependabot[bot].
           - The security workflow does not use an Actions secret.

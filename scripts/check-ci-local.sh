@@ -3,7 +3,7 @@
 # Requires docs/guardrails at the pinned gitlink and a uv environment.
 set -eu
 
-root="$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)"
+root="$(CDPATH='' cd -- "$(dirname "$0")/.." && pwd)"
 cd "${root}"
 
 if [ ! -f docs/guardrails/python/profile.thresholds.yml ]; then

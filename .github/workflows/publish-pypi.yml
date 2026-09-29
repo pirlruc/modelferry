@@ -36,6 +36,9 @@ jobs:
           python-version: '3.13'
       - name: Set up uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b  # v8.1.0
+        with:
+          # Release builds must not restore a shared cache (zizmor cache-poisoning).
+          enable-cache: false
       - name: Sync dev toolchain
         run: uv sync --frozen --extra dev
       - name: Build distributions

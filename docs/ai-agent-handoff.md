@@ -31,7 +31,8 @@ Issue methodology:
 | Live GitHub epic issues                          | Not created. The available token gets HTTP 403 on issue creation. The backlog is `docs/issues.yml`. |
 | `docs/guardrails`                                | Gitlink tag 1.8.0 (`aa5184c`)                      |
 | `.github/scaffold`                               | Gitlink tag 1.7.0 (`e76bb3f`)                      |
-| commondevops callers                             | Tag 5.1.2 commit `b3c462be` (infra lint, supply chain) |
+| commondevops scripts                             | Tag 5.1.2 commit `b3c462be`, checked out with `COMMONDEVOPS_READ_TOKEN` |
+| Actions secrets                                  | `GUARDRAILS_READ_TOKEN` and `COMMONDEVOPS_READ_TOKEN` are on the repo |
 
 ## Commands
 
@@ -64,8 +65,8 @@ uv build
 
 Open epics in `docs/issues.yml` under Phase 2 — Operate and harden:
 
-- `OPS-001` — Actions secret `GUARDRAILS_READ_TOKEN`
-- `CIREUSE-001` — Actions secret `COMMONDEVOPS_READ_TOKEN` (callers are already pinned)
+- `OPS-001` — secret `GUARDRAILS_READ_TOKEN` is on the repo; the task stays open until quality, tests, and docs are green on main
+- `CIREUSE-001` — secret `COMMONDEVOPS_READ_TOKEN` is on the repo; infra and supply-chain check out scripts because a public repo cannot call the private reusable workflow
 - `REL-001` — PyPI Trusted Publishing
 - `REL-002` — Dependabot credential for the private submodules
 - `GH-001` — GitHub Releases provider
@@ -95,6 +96,31 @@ Release.
 ______________________________________________________________________
 
 ## Log entries (newest first)
+
+### 2026-09-29 (UTC) — Use the new read tokens in CI
+
+**Trigger:** The Actions secrets `GUARDRAILS_READ_TOKEN` and `COMMONDEVOPS_READ_TOKEN`
+are on the repo. Make the workflows use them, fix whatever the analysis flags,
+and set the repository description.
+
+**Actions:** Quality, tests, and docs already pass `GUARDRAILS_READ_TOKEN` into
+`scripts/checkout-private-submodules.sh`. Infra and supply-chain no longer
+`uses:` the private commondevops workflows. They check out commit `b3c462be`
+with `COMMONDEVOPS_READ_TOKEN` and run the same lint and scan steps. Fixed
+shellcheck SC1007 in `scripts/check-ci-local.sh`, the Dependabot actor check,
+and uv cache on the release workflows so zizmor is clean.
+
+**Outcome:** Local actionlint, shellcheck, and zizmor 1.29.0 report no findings.
+pydevops is still not called, so there is no pydevops token. Sibling issue
+manifests are still unpublished. Updating the GitHub About description returned
+HTTP 403 for the integration token and for `CURSOR_REPO_READ_TOKEN`,
+`CURSOR_UPDATE_ISSUE_TOKEN`, and `GH_CACHE_TOKEN`.
+
+**Follow-ups:** Confirm the GitHub runs are green after this push. `OPS-001`
+and `CIREUSE-001` stay open until that is true on main. A token with
+repository administration can set the About text to: "Python library that
+streams model artifacts from a Git registry into a verified local cache and
+can select the version from a GitLab feature flag."
 
 ### 2026-09-29 (UTC) — Sibling issue manifests could not be pushed
 

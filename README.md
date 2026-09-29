@@ -136,9 +136,11 @@ sh scripts/check-ci-local.sh
 `docs/guardrails` is pinned at tag 1.8.0 and `.github/scaffold` at tag 1.7.0. Local and CI gates
 read `docs/guardrails/python/profile.thresholds.yml`. CI needs an Actions secret named
 `GUARDRAILS_READ_TOKEN` that can read those private repositories. Infra lint and the
-supply-chain scan call
+supply-chain scan check out
 [commondevops 5.1.2](https://github.com/pirlruc/commondevops/tree/b3c462bed0de4f6475e6be7875c4ababd831acc6)
-and need `COMMONDEVOPS_READ_TOKEN`.
+with `COMMONDEVOPS_READ_TOKEN`. A public repository cannot call that private reusable
+workflow, so the jobs run the pinned scripts in place. pydevops is not called, and
+this repository has no pydevops token.
 
 `uv build` produces the sdist and wheel. An annotated `vX.Y.Z` tag runs the Release workflow, which
 publishes a GitHub Release. That release publishes to PyPI with Trusted Publishing.
