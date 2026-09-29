@@ -19,7 +19,7 @@ jobs:
       id-token: write
     steps:
       - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           ref: ${{ github.event.release.tag_name }}
           fetch-depth: 0
@@ -36,6 +36,9 @@ jobs:
           python-version: '3.13'
       - name: Set up uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b  # v8.1.0
+        with:
+          # Release builds must not restore a shared cache (zizmor cache-poisoning).
+          enable-cache: false
       - name: Sync dev toolchain
         run: uv sync --frozen --extra dev
       - name: Build distributions

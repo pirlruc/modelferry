@@ -3,7 +3,7 @@
 # Requires docs/guardrails at the pinned gitlink and a uv environment.
 set -eu
 
-root="$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)"
+root="$(CDPATH='' cd -- "$(dirname "$0")/.." && pwd)"
 cd "${root}"
 
 if [ ! -f docs/guardrails/python/profile.thresholds.yml ]; then
@@ -43,9 +43,7 @@ uv run bandit -c pyproject.toml -r src -q
 echo "==> pip-audit (PY-SEC-004)"
 uv run pip-audit
 
-if [ -f .github/scaffold/scripts/lint-doc-links.py ]; then
-  echo "==> markdown links (DOC-LINT-001)"
-  uv run python .github/scaffold/scripts/lint-doc-links.py --root "${root}"
-fi
+echo "==> markdown links (DOC-LINT-001)"
+uv run python scripts/lint-doc-links.py --root "${root}"
 
 echo "Local CI parity passed."

@@ -1,7 +1,7 @@
 ---
 # Generated as the source of truth for epics and tasks.
 # Epic issues are the decision records. Do not add docs/adr markdown.
-# Methodology: https://github.com/pirlruc/methodologies/tree/1.5.0/github-issue-adr
+# Methodology: https://github.com/pirlruc/methodologies/tree/1.7.0/github-issue-adr
 repo: pirlruc/modelferry
 milestones:
   - name: Phase 1 — GitLab fetcher
@@ -226,7 +226,10 @@ milestones:
           target: .github/workflows, scripts/checkout-private-submodules.sh
           modules: [model_fetcher]
         acceptance_criteria:
-          - GUARDRAILS_READ_TOKEN can read pirlruc/guardrails and pirlruc/github-scaffold.
+          - GUARDRAILS_READ_TOKEN can read pirlruc/guardrails.
+          - The markdown link linter is the scaffold 1.7.0 snapshot under scripts/,
+            because that secret and COMMONDEVOPS_READ_TOKEN are denied on
+            pirlruc/github-scaffold.
           - A push to main completes the quality, tests, and docs workflows.
         out_of_scope:
           - Copying the private repositories into this repo.
@@ -496,4 +499,129 @@ milestones:
                 - .github/workflows
             verification:
               - The quality and security workflows complete without the force flag.
+      - id: GRD-002
+        status: done
+        title: Pin guardrails 1.8.0 and scaffold 1.7.0
+        decision: >-
+          In the context of the org pin moving past guardrails 1.6.0 and
+          scaffold 1.5.0, facing Python floors that did not change and new
+          CI-024 and supply-chain rules that did, we decided to move the
+          gitlinks to guardrails 1.8.0 and scaffold 1.7.0 and to sync the
+          scaffold templates, to achieve the current org profile without
+          lowering a gate, accepting that methodology links inside the
+          synced scaffold files still name methodologies 1.6.0.
+        overview:
+          problem: The library was still pinned to the 2026-09-11 releases.
+          goal: The gitlinks match the newest guardrails and scaffold releases.
+        architecture:
+          target: docs/guardrails, .github/scaffold, .cursor/rules
+          modules: [model_fetcher]
+        acceptance_criteria:
+          - docs/guardrails gitlink is tag 1.8.0.
+          - .github/scaffold gitlink is tag 1.7.0.
+          - mypy runs in strict mode.
+          - Statement and branch coverage stay at or above the pinned floors.
+        guardrail_refs:
+          - PY-RUN-002
+          - PY-TEST-002
+          - PY-CPLX-001
+          - PY-CPLX-002
+        tasks:
+          - id: GRD-002-T1
+            status: done
+            title: Bump the gitlinks and sync scaffold templates
+            instructions:
+              files:
+                - docs/guardrails
+                - .github/scaffold
+                - .cursor/rules
+                - AGENTS.md
+            verification:
+              - git -C docs/guardrails describe --tags --exact-match
+              - git -C .github/scaffold describe --tags --exact-match
+          - id: GRD-002-T2
+            status: done
+            title: Drop the coverage pragma and the global pylint suppression
+            instructions:
+              files:
+                - src/model_fetcher/__init__.py
+                - src/model_fetcher/cache.py
+                - pyproject.toml
+                - tests/test_edge_paths.py
+            verification:
+              - uv run python scripts/check-python-coverage.py
+              - uv run pylint src tests
+      - id: CIREUSE-001
+        status: open
+        title: Reuse commondevops infra lint and supply-chain scans
+        decision: >-
+          In the context of the ops repositories being public for now and
+          private again later, facing callers that were checking those
+          repositories out, we decided to call the reusable workflows with
+          uses and to pass COMMONDEVOPS_READ_TOKEN as checkout_token, to
+          achieve infra lint and supply-chain scans without a checkout step
+          in this repo, accepting that a public caller cannot resolve a
+          private uses target once those repositories are private again.
+          python-quality is not called. At pydevops 2.1.1 commit 19fa370 the
+          toolchain step runs uv tool install on pytest-cov, which has no
+          console script and exits 1. That is pydevops issue 170. The caller
+          to restore is the one in commit e7b77cc, which passes the pin as
+          devops_repository and devops_ref. PYDEVOPS_READ_TOKEN is not
+          passed because that workflow only accepts caller_pat. cppdevops
+          and containerdevops are not called.
+        overview:
+          problem: Checking out an ops repository duplicates the reusable
+            workflow. python-quality has no secret input for a read token.
+          goal: This repo calls the pinned reusable workflows and does not
+            check out commondevops, pydevops, cppdevops, or containerdevops.
+        architecture:
+          target: .github/workflows/ci-infra.yml, .github/workflows/ci-supply-chain.yml
+          modules: [model_fetcher]
+        acceptance_criteria:
+          - ci-infra.yml and ci-supply-chain.yml call commondevops at
+            b3c462be with scripts_ref set to that same commit and pass
+            COMMONDEVOPS_READ_TOKEN.
+          - No workflow checks out commondevops, pydevops, cppdevops, or
+            containerdevops. python-quality stays uncalled until pydevops
+            issue 170 is fixed.
+          - Jobs that need GUARDRAILS_READ_TOKEN or COMMONDEVOPS_READ_TOKEN
+            skip dependabot[bot].
+          - The security workflow does not use an Actions secret.
+        out_of_scope:
+          - cppdevops workflows. This repository has no C++.
+          - containerdevops workflows. This repository publishes no image.
+          - cppdevops and containerdevops stay out of scope. Passing
+            PYDEVOPS_READ_TOKEN waits until python-quality accepts a
+            checkout token secret.
+        guardrail_refs:
+          - CI-018
+          - CI-024
+          - CI-034
+          - SC-LIC-001
+          - PY-SEC-002
+          - PY-SEC-004
+        tasks:
+          - id: CIREUSE-001-T1
+            status: done
+            title: Add the commondevops callers and the Dependabot skip
+            instructions:
+              files:
+                - .github/workflows/ci-infra.yml
+                - .github/workflows/ci-supply-chain.yml
+                - .github/workflows/ci-quality.yml
+                - .github/workflows/ci-tests.yml
+                - .github/workflows/ci-docs.yml
+                - .github/workflows/ci-security.yml
+            verification:
+              - rg -n 'b3c462bed0de4f6475e6be7875c4ababd831acc6' .github/workflows
+              - rg -n "dependabot\\[bot\\]" .github/workflows
+          - id: CIREUSE-001-T2
+            status: open
+            title: Add the Actions secret COMMONDEVOPS_READ_TOKEN
+            instructions:
+              files:
+                - .github/workflows/ci-infra.yml
+                - .github/workflows/ci-supply-chain.yml
+            verification:
+              - The infra and supply-chain workflows on main finish green.
 

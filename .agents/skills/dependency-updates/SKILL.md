@@ -1,8 +1,13 @@
 ---
-description: Org Dependabot policy — one multi-ecosystem PR, monthly, all semver levels (SC-DEP-*)
-globs: "**/dependabot.yml,**/dependabot.yaml"
-alwaysApply: false
+name: dependency-updates
+description: 'Org Dependabot policy — one multi-ecosystem PR, monthly, all semver levels (SC-DEP-*). Use when editing files that match: **/dependabot.yml,**/dependabot.yaml.'
+paths: '**/dependabot.yml,**/dependabot.yaml'
+disable-model-invocation: true
 ---
+
+<!-- Generated from .cursor/rules by scripts/render-agent-instructions.py. Edit the .mdc files, then re-run that script. -->
+
+Cursor applies the matching `.cursor/rules` file by glob and does not auto-invoke this skill. Other agents should follow this skill when the description matches.
 
 # Dependency updates (SC-DEP-*)
 

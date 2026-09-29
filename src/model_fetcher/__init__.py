@@ -21,10 +21,20 @@ from model_fetcher.exceptions import (
 )
 from model_fetcher.models import DownloadResult, FeatureFlagResolution, ModelCoordinates
 
-try:
-    __version__ = version("model-fetcher")
-except PackageNotFoundError:  # pragma: no cover
-    __version__ = "0.1.0"
+
+def _distribution_version() -> str:
+    """Return the installed version, or the repo fallback when metadata is absent.
+
+    Returns:
+        The distribution version, or ``0.1.0`` when the package is not installed.
+    """
+    try:
+        return version("model-fetcher")
+    except PackageNotFoundError:
+        return "0.1.0"
+
+
+__version__ = _distribution_version()
 
 __all__ = [
     "AuthenticationError",

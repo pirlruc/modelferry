@@ -1,14 +1,19 @@
 ---
-description: Shared release versioning, changelog, and publish contract (REL-VER/CHG/PUB)
-globs: "**/CHANGELOG*,**/RELEASE*,**/.release-please*,**/release-please*,**/commitizen*,**/cz.yaml,**/.cz.toml,**/action-gh-release*"
-alwaysApply: false
+name: release-publish
+description: 'Shared release versioning, changelog, and publish contract (REL-VER/CHG/PUB). Use when editing files that match: **/CHANGELOG*,**/RELEASE*,**/.release-please*,**/release-please*,**/commitizen*,**/cz.yaml,**/.cz.toml,**/action-gh-release*.'
+paths: '**/CHANGELOG*,**/RELEASE*,**/.release-please*,**/release-please*,**/commitizen*,**/cz.yaml,**/.cz.toml,**/action-gh-release*'
+disable-model-invocation: true
 ---
+
+<!-- Generated from .cursor/rules by scripts/render-agent-instructions.py. Edit the .mdc files, then re-run that script. -->
+
+Cursor applies the matching `.cursor/rules` file by glob and does not auto-invoke this skill. Other agents should follow this skill when the description matches.
 
 # Release and publish (REL-*)
 
 Cite Guardrail IDs from
 [`docs/guardrails/release/`](https://github.com/pirlruc/guardrails/tree/1.7.0/release).
-Conventional Commits (see [conventional-commits.mdc](conventional-commits.mdc)) govern commit **input**;
+Conventional Commits (see [conventional-commits.mdc](../../../.cursor/rules/conventional-commits.mdc)) govern commit **input**;
 this rule governs release **output**. Do not bake cadence numbers into this file.
 
 ## Required citations

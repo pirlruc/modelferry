@@ -70,7 +70,7 @@ class BaseRegistryProvider(ABC):
         """
 
 
-class BaseFlagProvider(ABC):
+class BaseFlagProvider(ABC):  # pylint: disable=too-few-public-methods
     """Evaluate a feature flag and extract model coordinates from its payload.
 
     Constructors use the same ``(config, client)`` pair as

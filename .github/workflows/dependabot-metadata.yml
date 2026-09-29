@@ -10,7 +10,8 @@ jobs:
   metadata:
     name: Summarize Dependabot dependency update
     # This workflow intentionally skips maintainer-authored PRs.
-    if: github.actor == 'dependabot[bot]'
+    # login alone is spoofable (zizmor bot-conditions). 49699333 is dependabot[bot].
+    if: github.event.pull_request.user.login == 'dependabot[bot]' && github.event.pull_request.user.id == 49699333
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -18,13 +19,19 @@ jobs:
         id: metadata
         uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98  # v3.1.0
       - name: Summarize dependency update
+        env:
+          DEPENDENCY_NAMES: ${{ steps.metadata.outputs.dependency-names }}
+          DEPENDENCY_TYPE: ${{ steps.metadata.outputs.dependency-type }}
+          UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
+          PACKAGE_ECOSYSTEM: ${{ steps.metadata.outputs.package-ecosystem }}
+          DIRECTORY: ${{ steps.metadata.outputs.directory }}
         run: |-
           {
             echo "## Dependabot update"
             echo
-            echo "- Dependency names: ${{ steps.metadata.outputs.dependency-names }}"
-            echo "- Dependency type: ${{ steps.metadata.outputs.dependency-type }}"
-            echo "- Update type: ${{ steps.metadata.outputs.update-type }}"
-            echo "- Package ecosystem: ${{ steps.metadata.outputs.package-ecosystem }}"
-            echo "- Directory: ${{ steps.metadata.outputs.directory }}"
+            echo "- Dependency names: ${DEPENDENCY_NAMES}"
+            echo "- Dependency type: ${DEPENDENCY_TYPE}"
+            echo "- Update type: ${UPDATE_TYPE}"
+            echo "- Package ecosystem: ${PACKAGE_ECOSYSTEM}"
+            echo "- Directory: ${DIRECTORY}"
           } >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,29 @@
+---
+name: Infra
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+permissions: {}
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  infra:
+    # commondevops 5.1.2 (CI-018 / CI-034). Reuse the workflow; do not check
+    # the ops repository out from this caller. COMMONDEVOPS_READ_TOKEN is the
+    # script checkout secret for when that repository is private again.
+    # CI-024: Dependabot cannot read the secret.
+    if: github.actor != 'dependabot[bot]'
+    permissions:
+      contents: read
+    uses: pirlruc/commondevops/.github/workflows/common-infra-lint.yml@b3c462bed0de4f6475e6be7875c4ababd831acc6
+    with:
+      blocking: true
+      scripts_ref: b3c462bed0de4f6475e6be7875c4ababd831acc6
+      shell_scripts: scripts/*.sh
+    secrets:
+      checkout_token: ${{ secrets.COMMONDEVOPS_READ_TOKEN }}

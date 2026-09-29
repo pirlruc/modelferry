@@ -69,3 +69,8 @@ dmypy.json
 # Cursor local ignore files
 .cursorignore
 .cursorindexingignore
+
+# CI checkouts and scan output (commondevops scripts, Syft/Grype/Trivy, grant)
+_commondevops/
+scan-results/
+.grant.yaml

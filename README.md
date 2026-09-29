@@ -133,13 +133,24 @@ uv run pre-commit install
 sh scripts/check-ci-local.sh
 ```
 
-`docs/guardrails` is pinned at tag 1.6.0 and `.github/scaffold` at tag 1.5.0. Local and CI gates
+`docs/guardrails` is pinned at tag 1.8.0 and `.github/scaffold` at tag 1.7.0. Local and CI gates
 read `docs/guardrails/python/profile.thresholds.yml`. CI needs an Actions secret named
-`GUARDRAILS_READ_TOKEN` that can read those private repositories.
+`GUARDRAILS_READ_TOKEN` reads the guardrails pin. That secret is denied on
+`pirlruc/github-scaffold`, and so is `COMMONDEVOPS_READ_TOKEN`, so CI uses the
+vendored link linter in `scripts/lint-doc-links.py` (scaffold tag 1.7.0). Infra
+lint and the supply-chain scan call
+[commondevops 5.1.2](https://github.com/pirlruc/commondevops/tree/b3c462bed0de4f6475e6be7875c4ababd831acc6)
+and pass `COMMONDEVOPS_READ_TOKEN`. Python quality is not called.
+[pydevops 2.1.1](https://github.com/pirlruc/pydevops/tree/19fa370f5f11bae423d4c0586080dbed32f9ddf8)
+runs `uv tool install pytest-cov`, and that package has no console script, so
+the toolchain step exits 1 ([pydevops#170](https://github.com/pirlruc/pydevops/issues/170)).
+`PYDEVOPS_READ_TOKEN` is present and unused until that workflow accepts a
+checkout token. This repository does not check out the ops repositories. cppdevops
+and containerdevops are not called, so they need no token here.
 
 `uv build` produces the sdist and wheel. An annotated `vX.Y.Z` tag runs the Release workflow, which
 publishes a GitHub Release. That release publishes to PyPI with Trusted Publishing.
 
 Decisions are GitHub epics, not ADR markdown files. The backlog lives in `docs/issues.yml`.
 Methodology:
-[github-issue-adr](https://github.com/pirlruc/methodologies/tree/1.5.0/github-issue-adr).
+[github-issue-adr](https://github.com/pirlruc/methodologies/tree/1.7.0/github-issue-adr).

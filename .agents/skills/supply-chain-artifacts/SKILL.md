@@ -1,8 +1,13 @@
 ---
-description: SBOM, provenance, signing, and license gates for published artifacts (SC-SBOM/PROV/SIGN/LIC)
-globs: "**/*sbom*,**/cosign*,**/*provenance*,**/license_gate*,**/attestation*"
-alwaysApply: false
+name: supply-chain-artifacts
+description: 'SBOM, provenance, signing, and license gates for published artifacts (SC-SBOM/PROV/SIGN/LIC). Use when editing files that match: **/*sbom*,**/cosign*,**/*provenance*,**/license_gate*,**/attestation*.'
+paths: '**/*sbom*,**/cosign*,**/*provenance*,**/license_gate*,**/attestation*'
+disable-model-invocation: true
 ---
+
+<!-- Generated from .cursor/rules by scripts/render-agent-instructions.py. Edit the .mdc files, then re-run that script. -->
+
+Cursor applies the matching `.cursor/rules` file by glob and does not auto-invoke this skill. Other agents should follow this skill when the description matches.
 
 # Supply-chain artifacts (SC-SBOM / SC-PROV / SC-SIGN / SC-LIC)
 
