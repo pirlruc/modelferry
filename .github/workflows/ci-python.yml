@@ -14,8 +14,12 @@ concurrency:
   cancel-in-progress: true
 jobs:
   python-quality:
-    # pydevops 2.1.1, peeled commit 19fa370 (CI-018). Call the workflow.
-    # Do not check pirlruc/pydevops out from this repository.
+    # pydevops 2.1.1, peeled commit 19fa370 (CI-018 / CI-034). Call the
+    # workflow. Do not check pirlruc/pydevops out from this repository.
+    # devops_repository and devops_ref are set because an empty pair is
+    # parsed from github.workflow_ref, and that context is this caller
+    # workflow, not the reusable workflow. Omitting them checked this
+    # repository out as the DevOps tree.
     # PYDEVOPS_READ_TOKEN is not passed: workflow_call only accepts
     # caller_pat, and that secret posts the PR comment. The DevOps
     # checkout inside the reusable workflow uses github.token.
@@ -33,5 +37,7 @@ jobs:
       docstring_format: Google
       enable_dast: false
       license_deny_list: '[]'
+      devops_repository: pirlruc/pydevops
+      devops_ref: 19fa370f5f11bae423d4c0586080dbed32f9ddf8
       working_directory: .
       python_version: '3.13'

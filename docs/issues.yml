@@ -562,7 +562,10 @@ milestones:
           achieve infra lint and supply-chain scans without a checkout step
           in this repo, accepting that a public caller cannot resolve a
           private uses target once those repositories are private again.
-          python-quality is called at pydevops 2.1.1 commit 19fa370.
+          python-quality is called at pydevops 2.1.1 commit 19fa370 with
+          devops_repository and devops_ref set to that same pin. An empty
+          pair is parsed from github.workflow_ref, which is the caller
+          workflow, so the DevOps checkout would be this repository.
           PYDEVOPS_READ_TOKEN is not passed because that workflow only
           accepts caller_pat. cppdevops and containerdevops are not called.
         overview:
@@ -577,8 +580,9 @@ milestones:
           - ci-infra.yml and ci-supply-chain.yml call commondevops at
             b3c462be with scripts_ref set to that same commit and pass
             COMMONDEVOPS_READ_TOKEN.
-          - ci-python.yml calls pydevops python-quality at 19fa370 and does
-            not check that repository out.
+          - ci-python.yml calls pydevops python-quality at 19fa370, passes
+            devops_repository pirlruc/pydevops and devops_ref 19fa370, and
+            does not check that repository out.
           - Jobs that need GUARDRAILS_READ_TOKEN or COMMONDEVOPS_READ_TOKEN
             skip dependabot[bot].
           - The security workflow does not use an Actions secret.

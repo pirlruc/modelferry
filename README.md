@@ -142,6 +142,9 @@ lint and the supply-chain scan call
 [commondevops 5.1.2](https://github.com/pirlruc/commondevops/tree/b3c462bed0de4f6475e6be7875c4ababd831acc6)
 and pass `COMMONDEVOPS_READ_TOKEN`. Python quality calls
 [pydevops 2.1.1](https://github.com/pirlruc/pydevops/tree/19fa370f5f11bae423d4c0586080dbed32f9ddf8).
+The caller passes `devops_repository` and `devops_ref` equal to that pin.
+`python-quality.yml` otherwise reads `github.workflow_ref`, which is the caller
+workflow, and would check this repository out as the DevOps tree.
 `PYDEVOPS_READ_TOKEN` is present and unused: `python-quality.yml` has no checkout
 token input. This repository does not check out the ops repositories. cppdevops
 and containerdevops are not called, so they need no token here.

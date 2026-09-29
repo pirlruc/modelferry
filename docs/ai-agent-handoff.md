@@ -32,7 +32,7 @@ Issue methodology:
 | `docs/guardrails`                                | Gitlink tag 1.8.0 (`aa5184c`)                      |
 | `.github/scaffold`                               | Gitlink tag 1.7.0 (`e76bb3f`)                      |
 | commondevops callers                             | `uses:` tag 5.1.2 commit `b3c462be`, secret `COMMONDEVOPS_READ_TOKEN` |
-| pydevops caller                                  | `uses:` tag 2.1.1 commit `19fa370`. `PYDEVOPS_READ_TOKEN` is unused |
+| pydevops caller                                  | `uses:` tag 2.1.1 commit `19fa370`, with `devops_repository` and `devops_ref` set to that pin. `PYDEVOPS_READ_TOKEN` is unused |
 | Actions secrets                                  | `GUARDRAILS_READ_TOKEN`, `COMMONDEVOPS_READ_TOKEN`, `PYDEVOPS_READ_TOKEN` |
 
 ## Commands
@@ -67,7 +67,7 @@ uv build
 Open epics in `docs/issues.yml` under Phase 2 — Operate and harden:
 
 - `OPS-001` — secret `GUARDRAILS_READ_TOKEN` is on the repo; the task stays open until quality, tests, and docs are green on main
-- `CIREUSE-001` — secret `COMMONDEVOPS_READ_TOKEN` is on the repo; infra and supply-chain check out scripts because a public repo cannot call the private reusable workflow
+- `CIREUSE-001` — secret `COMMONDEVOPS_READ_TOKEN` is on the repo and the infra and supply-chain workflows call the reusable workflow; the task stays open until those workflows are green on main
 - `REL-001` — PyPI Trusted Publishing
 - `REL-002` — Dependabot credential for the private submodules
 - `GH-001` — GitHub Releases provider
@@ -82,6 +82,8 @@ entry). `CURSOR_UPDATE_ISSUE_TOKEN` can create issues and cannot push
 | [github-scaffold](https://github.com/pirlruc/github-scaffold) | `GS-PY-CALL` | Seed opt-in `templates/ci-python.yml` after pydevops accepts a checkout token. Do not seed it through `sync-templates.sh`. |
 | [guardrails](https://github.com/pirlruc/guardrails) | `GR-PY-REF` | Name pydevops `python-quality` in the CI reference implementations. |
 | [pydevops](https://github.com/pirlruc/pydevops) | `PDO-CHKOUT-001` | Add `checkout_token` to `python-quality.yml` so a private caller can fetch the scripts. |
+| pydevops | `PDO-COORD-001` | Empty `devops_repository` parses `github.workflow_ref`, which is the caller. [pydevops#168](https://github.com/pirlruc/pydevops/issues/168). |
+| [guardrails](https://github.com/pirlruc/guardrails) | `GR-WF-REF` | CI-034 should say `github.workflow_ref` is the caller workflow. [guardrails#185](https://github.com/pirlruc/guardrails/issues/185). |
 | pydevops | `PDO-PIN-018` | Gitlinks are still guardrails `77cf16eb` (1.6.0) and scaffold `9e04ed53` (1.5.0). |
 | [commondevops](https://github.com/pirlruc/commondevops) | `CMN-PIN-018` | Same gitlink lag as pydevops. |
 | commondevops | `CMN-DOC-CALL` | `common-doc-verify` should also look in `.github/scaffold/scripts` when `scripts/` copies are absent, and still fail closed if neither exists. |
@@ -96,6 +98,28 @@ Release.
 ______________________________________________________________________
 
 ## Log entries (newest first)
+
+### 2026-09-29 (UTC) — Pin the python-quality DevOps checkout
+
+**Trigger:** Python quality run 36645036392 checked this repository out as the
+DevOps tree. `github.workflow_ref` in the called workflow is the caller file.
+
+**Actions:** `ci-python.yml` now passes `devops_repository: pirlruc/pydevops`
+and `devops_ref: 19fa370f5f11bae423d4c0586080dbed32f9ddf8`. No workflow checks
+an ops repository out. Opened
+[pydevops#168](https://github.com/pirlruc/pydevops/issues/168) (task #169) and
+[guardrails#185](https://github.com/pirlruc/guardrails/issues/185) (task #186).
+Commented on [github-scaffold#148](https://github.com/pirlruc/github-scaffold/issues/148#issuecomment-5901037320).
+
+**Outcome:** The caller no longer relies on the broken coordinate fallback.
+Product review of token stripping, checksum origin checks, and cache path
+segments found no change to make. Methodologies, commondevops, cppdevops, and
+containerdevops needed no new issue: commondevops already fails closed on a
+missing `scripts_ref`, and the C++ and container workflows do not parse
+`github.workflow_ref`.
+
+**Follow-ups:** Merge PR 3 only after every workflow on this commit is green,
+then delete `cursor/bump-guardrails-scaffold-2781`.
 
 ### 2026-09-29 (UTC) — Grant the python-quality permission union
 
