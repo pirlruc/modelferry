@@ -110,10 +110,12 @@ and `scripts/doc_links/`, with `Returns` sections so ruff DOC201 passes.
 Complexity stays inside the floors (max CC 8, average 3.12).
 
 **Outcome:** Local ruff, shellcheck, complexity, and the link linter pass.
-GitHub still has to run quality, tests, and docs.
+GitHub run for `89371be` is green: quality, tests, docs, security, infra, and
+supply-chain.
 
 **Follow-ups:** A token with contents read on `pirlruc/github-scaffold` can
-replace the vendored linter with a checkout of the gitlink.
+replace the vendored linter with a checkout of the gitlink. `OPS-001` and
+`CIREUSE-001` stay open until the same workflows are green on main.
 
 ### 2026-09-29 (UTC) — Scaffold checkout uses the commondevops token
 
