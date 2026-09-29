@@ -97,6 +97,22 @@ ______________________________________________________________________
 
 ## Log entries (newest first)
 
+### 2026-09-29 (UTC) — Scaffold checkout uses the commondevops token
+
+**Trigger:** Quality, tests, and docs failed after the secrets were added.
+`GUARDRAILS_READ_TOKEN` fetched guardrails and got HTTP 403 on
+`pirlruc/github-scaffold`.
+
+**Actions:** `scripts/checkout-private-submodules.sh` now fetches scaffold with
+`COMMONDEVOPS_READ_TOKEN` when that secret is set. Quality, tests, and docs
+pass both secrets.
+
+**Outcome:** Infra and supply-chain were already green on `2a4f697`.
+
+**Follow-ups:** If scaffold still returns 403, the commondevops token also
+lacks contents read on `pirlruc/github-scaffold`. That grant has to be on the
+token itself.
+
 ### 2026-09-29 (UTC) — Use the new read tokens in CI
 
 **Trigger:** The Actions secrets `GUARDRAILS_READ_TOKEN` and `COMMONDEVOPS_READ_TOKEN`
