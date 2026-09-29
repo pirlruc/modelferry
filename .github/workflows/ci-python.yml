@@ -19,6 +19,14 @@ jobs:
     # PYDEVOPS_READ_TOKEN is not passed: workflow_call only accepts
     # caller_pat, and that secret posts the PR comment. The DevOps
     # checkout inside the reusable workflow uses github.token.
+    # CI-031: the callee's jobs request this union, including contents
+    # write for the tag-only release job. A caller that grants nothing
+    # fails at startup.
+    permissions:
+      actions: write
+      contents: write
+      pull-requests: write
+      security-events: write
     uses: pirlruc/pydevops/.github/workflows/python-quality.yml@19fa370f5f11bae423d4c0586080dbed32f9ddf8
     with:
       strictness_level: High

@@ -97,6 +97,19 @@ ______________________________________________________________________
 
 ## Log entries (newest first)
 
+### 2026-09-29 (UTC) — Grant the python-quality permission union
+
+**Trigger:** `ci-python.yml` startup_failed. The callee jobs request actions
+write, contents write, pull-requests write, and security-events write, and the
+caller had granted none (CI-031).
+
+**Actions:** The caller job now grants that union. Opened
+[pydevops#166](https://github.com/pirlruc/pydevops/issues/166) so the example
+caller documents it, and commented on pydevops#162 and github-scaffold#148.
+
+**Outcome:** Infra, supply-chain, quality, tests, docs, and security were
+already green. Python quality had not started.
+
 ### 2026-09-29 (UTC) — Call reusable ops workflows and open sibling issues
 
 **Trigger:** The ops repositories are public for now and will be private again.
