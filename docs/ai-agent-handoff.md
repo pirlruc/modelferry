@@ -32,7 +32,7 @@ Issue methodology:
 | `docs/guardrails`                                | Gitlink tag 1.8.0 (`aa5184c`)                      |
 | `.github/scaffold`                               | Gitlink tag 1.7.0 (`e76bb3f`)                      |
 | commondevops callers                             | `uses:` tag 5.1.2 commit `b3c462be`, secret `COMMONDEVOPS_READ_TOKEN` |
-| pydevops caller                                  | `uses:` tag 2.1.1 commit `19fa370`, with `devops_repository` and `devops_ref` set to that pin. `PYDEVOPS_READ_TOKEN` is unused |
+| pydevops caller                                  | Not called. `python-quality` at `19fa370` fails `uv tool install pytest-cov` ([pydevops#170](https://github.com/pirlruc/pydevops/issues/170)). `PYDEVOPS_READ_TOKEN` is unused |
 | Actions secrets                                  | `GUARDRAILS_READ_TOKEN`, `COMMONDEVOPS_READ_TOKEN`, `PYDEVOPS_READ_TOKEN` |
 
 ## Commands
@@ -83,6 +83,7 @@ entry). `CURSOR_UPDATE_ISSUE_TOKEN` can create issues and cannot push
 | [guardrails](https://github.com/pirlruc/guardrails) | `GR-PY-REF` | Name pydevops `python-quality` in the CI reference implementations. |
 | [pydevops](https://github.com/pirlruc/pydevops) | `PDO-CHKOUT-001` | Add `checkout_token` to `python-quality.yml` so a private caller can fetch the scripts. |
 | pydevops | `PDO-COORD-001` | Empty `devops_repository` parses `github.workflow_ref`, which is the caller. [pydevops#168](https://github.com/pirlruc/pydevops/issues/168). |
+| pydevops | `PDO-TOOL-001` | `uv tool install pytest-cov` exits 1 on uv 0.6.9. [pydevops#170](https://github.com/pirlruc/pydevops/issues/170). |
 | [guardrails](https://github.com/pirlruc/guardrails) | `GR-WF-REF` | CI-034 should say `github.workflow_ref` is the caller workflow. [guardrails#185](https://github.com/pirlruc/guardrails/issues/185). |
 | pydevops | `PDO-PIN-018` | Gitlinks are still guardrails `77cf16eb` (1.6.0) and scaffold `9e04ed53` (1.5.0). |
 | [commondevops](https://github.com/pirlruc/commondevops) | `CMN-PIN-018` | Same gitlink lag as pydevops. |
@@ -98,6 +99,25 @@ Release.
 ______________________________________________________________________
 
 ## Log entries (newest first)
+
+### 2026-09-29 (UTC) — Drop the python-quality caller until the toolchain installs
+
+**Trigger:** On `e7b77cc`, DevOps coordinates resolved to pydevops and the shield
+job passed. Jobs 2 and 3 then failed in `qa-install-toolchain`.
+
+**Actions:** Removed `.github/workflows/ci-python.yml`. Opened
+[pydevops#170](https://github.com/pirlruc/pydevops/issues/170) (task #171).
+`uv tool install pytest-cov==7.1.0` with uv 0.6.9 prints `No executables are
+provided by pytest-cov` and exits 1. Local quality, tests, docs, and security
+already cover the same gates.
+
+**Outcome:** This repository still does not check out an ops repository. The
+caller to restore is commit `e7b77cc`: `devops_repository` `pirlruc/pydevops`,
+`devops_ref` `19fa370f5f11bae423d4c0586080dbed32f9ddf8`, and the permission
+union actions write, contents write, pull-requests write, security-events write.
+
+**Follow-ups:** Merge only after the workflows that remain are green on the
+new commit. Restore the caller after pydevops#170.
 
 ### 2026-09-29 (UTC) — Pin the python-quality DevOps checkout
 

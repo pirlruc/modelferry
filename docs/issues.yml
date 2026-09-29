@@ -562,12 +562,13 @@ milestones:
           achieve infra lint and supply-chain scans without a checkout step
           in this repo, accepting that a public caller cannot resolve a
           private uses target once those repositories are private again.
-          python-quality is called at pydevops 2.1.1 commit 19fa370 with
-          devops_repository and devops_ref set to that same pin. An empty
-          pair is parsed from github.workflow_ref, which is the caller
-          workflow, so the DevOps checkout would be this repository.
-          PYDEVOPS_READ_TOKEN is not passed because that workflow only
-          accepts caller_pat. cppdevops and containerdevops are not called.
+          python-quality is not called. At pydevops 2.1.1 commit 19fa370 the
+          toolchain step runs uv tool install on pytest-cov, which has no
+          console script and exits 1. That is pydevops issue 170. The caller
+          to restore is the one in commit e7b77cc, which passes the pin as
+          devops_repository and devops_ref. PYDEVOPS_READ_TOKEN is not
+          passed because that workflow only accepts caller_pat. cppdevops
+          and containerdevops are not called.
         overview:
           problem: Checking out an ops repository duplicates the reusable
             workflow. python-quality has no secret input for a read token.
@@ -580,9 +581,9 @@ milestones:
           - ci-infra.yml and ci-supply-chain.yml call commondevops at
             b3c462be with scripts_ref set to that same commit and pass
             COMMONDEVOPS_READ_TOKEN.
-          - ci-python.yml calls pydevops python-quality at 19fa370, passes
-            devops_repository pirlruc/pydevops and devops_ref 19fa370, and
-            does not check that repository out.
+          - No workflow checks out commondevops, pydevops, cppdevops, or
+            containerdevops. python-quality stays uncalled until pydevops
+            issue 170 is fixed.
           - Jobs that need GUARDRAILS_READ_TOKEN or COMMONDEVOPS_READ_TOKEN
             skip dependabot[bot].
           - The security workflow does not use an Actions secret.

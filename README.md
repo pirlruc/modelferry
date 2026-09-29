@@ -140,13 +140,12 @@ read `docs/guardrails/python/profile.thresholds.yml`. CI needs an Actions secret
 vendored link linter in `scripts/lint-doc-links.py` (scaffold tag 1.7.0). Infra
 lint and the supply-chain scan call
 [commondevops 5.1.2](https://github.com/pirlruc/commondevops/tree/b3c462bed0de4f6475e6be7875c4ababd831acc6)
-and pass `COMMONDEVOPS_READ_TOKEN`. Python quality calls
-[pydevops 2.1.1](https://github.com/pirlruc/pydevops/tree/19fa370f5f11bae423d4c0586080dbed32f9ddf8).
-The caller passes `devops_repository` and `devops_ref` equal to that pin.
-`python-quality.yml` otherwise reads `github.workflow_ref`, which is the caller
-workflow, and would check this repository out as the DevOps tree.
-`PYDEVOPS_READ_TOKEN` is present and unused: `python-quality.yml` has no checkout
-token input. This repository does not check out the ops repositories. cppdevops
+and pass `COMMONDEVOPS_READ_TOKEN`. Python quality is not called.
+[pydevops 2.1.1](https://github.com/pirlruc/pydevops/tree/19fa370f5f11bae423d4c0586080dbed32f9ddf8)
+runs `uv tool install pytest-cov`, and that package has no console script, so
+the toolchain step exits 1 ([pydevops#170](https://github.com/pirlruc/pydevops/issues/170)).
+`PYDEVOPS_READ_TOKEN` is present and unused until that workflow accepts a
+checkout token. This repository does not check out the ops repositories. cppdevops
 and containerdevops are not called, so they need no token here.
 
 `uv build` produces the sdist and wheel. An annotated `vX.Y.Z` tag runs the Release workflow, which
