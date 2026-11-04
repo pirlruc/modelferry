@@ -28,5 +28,3 @@ jobs:
       scripts_ref: b3c462bed0de4f6475e6be7875c4ababd831acc6
       license_engine: grant
       license_deny_list: '[]'
-    secrets:
-      checkout_token: ${{ secrets.COMMONDEVOPS_READ_TOKEN }}
