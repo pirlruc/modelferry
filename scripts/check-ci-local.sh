@@ -7,8 +7,8 @@ root="$(CDPATH='' cd -- "$(dirname "$0")/.." && pwd)"
 cd "${root}"
 
 if [ ! -f docs/guardrails/python/profile.thresholds.yml ]; then
-  echo "error: init docs/guardrails (git submodule update --init)" >&2
-  exit 1
+    echo "error: init docs/guardrails (git submodule update --init)" >&2
+    exit 1
 fi
 
 echo "==> ruff"
@@ -28,7 +28,7 @@ echo "==> coverage (PY-TEST-002)"
 uv run python scripts/check-python-coverage.py
 
 doc_coverage="$(
-  uv run python -c 'import yaml; from pathlib import Path; data = yaml.safe_load(Path("docs/guardrails/python/profile.thresholds.yml").read_text()); print(data["doc_coverage"])'
+    uv run python -c 'import yaml; from pathlib import Path; data = yaml.safe_load(Path("docs/guardrails/python/profile.thresholds.yml").read_text()); print(data["doc_coverage"])'
 )"
 
 echo "==> doc coverage (PY-DOC-001)"

@@ -624,4 +624,54 @@ milestones:
                 - .github/workflows/ci-supply-chain.yml
             verification:
               - The infra and supply-chain workflows on main finish green.
+  - name: Wave 4 — guardrails 1.15
+    status: open
+    epics:
+      - id: MF-QUAL-001
+        status: done
+        title: Keep documented callee errors out of DOC502
+        overview:
+          problem: >-
+            Public methods document errors that a callee raises. DOC502 only
+            sees a raise in the same function.
+          goal: >-
+            The Google docstrings stay, and the lint exception is recorded.
+        decision: >-
+          In the context of a library facade, facing DOC502 on documented
+          callee errors, we decided to ignore DOC502 globally and record
+          PY-QUAL-001, to achieve docstrings that still name the errors,
+          accepting a review date instead of per-function noqa comments.
+        acceptance_criteria:
+          - docs/guardrail-deviations.yml records PY-QUAL-001
+          - The review date is in the future
+        tasks:
+          - id: MF-QUAL-001-T1
+            status: done
+            title: Record the DOC502 exception
+            verification:
+              - rg -n "PY-QUAL-001" docs/guardrail-deviations.yml
+      - id: MF-SEC-001
+        status: done
+        title: Fail closed on cache, pagination, and token transport
+        overview:
+          problem: >-
+            A stuck GitLab page, a cleartext token, an unknown flag strategy,
+            and a cache hit without a digest could accept the wrong bytes.
+          goal: >-
+            Those paths fail closed, and a default size cap bounds a download.
+        decision: >-
+          In the context of fetching a model from GitLab, facing cache and
+          transport gaps, we decided to reject non-advancing pages, non-TLS
+          tokens, unknown strategies, and digest-less cache hits, to achieve
+          a fail-closed client, accepting an 8 GiB default cap.
+        acceptance_criteria:
+          - A stuck x-next-page raises DownloadError
+          - A token is not sent to a non-loopback http origin
+          - A cache hit needs an expected digest or a matching sidecar
+        tasks:
+          - id: MF-SEC-001-T1
+            status: done
+            title: Close the cache and transport gaps
+            verification:
+              - uv run pytest
 

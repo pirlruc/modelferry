@@ -478,6 +478,32 @@ def _give_up_or_wait(attempt: int, path: str, exc: httpx.HTTPError) -> None:
     _pause(attempt)
 
 
+def _advance_page(page: int, header: str) -> int | None:
+    """Return the next page, or ``None`` when pagination is finished.
+
+    Args:
+        page: Page that was just fetched.
+        header: Raw ``x-next-page`` header.
+
+    Returns:
+        The next page number.
+
+    Raises:
+        DownloadError: If the header is invalid or does not move forward.
+    """
+    next_page = header.strip()
+    if not next_page:
+        return None
+
+    parsed = _next_page(next_page)
+    if parsed <= page:
+        raise DownloadError(
+            f"GitLab x-next-page did not advance from page {page}: {next_page!r}",
+        )
+
+    return parsed
+
+
 def _next_page(header: str) -> int:
     """Parse a GitLab ``x-next-page`` header.
 
@@ -632,11 +658,11 @@ class GitLabHttp:
             if _page_selected(until, payload):
                 return collected
 
-            next_page = response.headers.get("x-next-page", "").strip()
-            if not next_page:
+            advanced = _advance_page(page, response.headers.get("x-next-page", ""))
+            if advanced is None:
                 return collected
 
-            page = _next_page(next_page)
+            page = advanced
 
         raise DownloadError(f"GitLab pagination exceeded {_MAX_PAGES} pages for {path}")
 

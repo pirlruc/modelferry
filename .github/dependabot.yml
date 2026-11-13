@@ -11,6 +11,8 @@ multi-ecosystem-groups:
     commit-message:
       prefix: build
       include: scope
+    cooldown:
+      default-days: 7
 updates:
   - package-ecosystem: github-actions
     directory: /
@@ -24,7 +26,15 @@ updates:
     directory: /
     patterns: ["*"]
     multi-ecosystem-group: all-dependencies
+  # Ungrouped. Registries stay commented until DEPENDABOT_GITHUB_TOKEN exists.
   - package-ecosystem: gitsubmodule
     directory: /
-    patterns: ["*"]
-    multi-ecosystem-group: all-dependencies
+    schedule:
+      interval: monthly
+      time: "06:00"
+      timezone: Europe/Lisbon
+    commit-message:
+      prefix: build
+      include: scope
+    cooldown:
+      default-days: 7

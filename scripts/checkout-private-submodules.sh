@@ -9,8 +9,8 @@ set -eu
 
 token="${GUARDRAILS_READ_TOKEN:-}"
 if [ -z "${token}" ]; then
-  echo "error: GUARDRAILS_READ_TOKEN is required to fetch docs/guardrails" >&2
-  exit 1
+    echo "error: GUARDRAILS_READ_TOKEN is required to fetch docs/guardrails" >&2
+    exit 1
 fi
 
 export GIT_TERMINAL_PROMPT=0
@@ -28,9 +28,9 @@ git -C "${path}" config safe.directory "${root}/${path}"
 # The token stays in the git process environment, not the remote URL or argv.
 auth="$(printf 'x-access-token:%s' "${token}" | base64 | tr -d '\n')"
 GIT_CONFIG_COUNT=1 \
-  GIT_CONFIG_KEY_0=http.extraheader \
-  GIT_CONFIG_VALUE_0="AUTHORIZATION: basic ${auth}" \
-  git -C "${path}" fetch --depth 1 "https://github.com/${repo}.git" "${sha}"
+    GIT_CONFIG_KEY_0=http.extraheader \
+    GIT_CONFIG_VALUE_0="AUTHORIZATION: basic ${auth}" \
+    git -C "${path}" fetch --depth 1 "https://github.com/${repo}.git" "${sha}"
 git -C "${path}" checkout --detach FETCH_HEAD
 git -C "${path}" remote add origin "https://github.com/${repo}.git"
 test -f docs/guardrails/python/profile.thresholds.yml

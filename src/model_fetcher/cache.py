@@ -454,8 +454,11 @@ def _cache_file_ready(path: Path) -> bool:
     Returns:
         False when a sibling download marker exists or the file is missing or empty.
     """
-    partial = path.with_name(path.name + ".downloading")
-    return not partial.exists() and path.is_file() and path.stat().st_size > 0
+    if not path.is_file() or path.stat().st_size <= 0:
+        return False
+
+    prefix = f"{path.name}.downloading."
+    return not any(child.name.startswith(prefix) for child in path.parent.iterdir())
 
 
 def _sidecar_digest(path: Path) -> str | None:
@@ -523,6 +526,9 @@ def _digest_ok(actual: str, recorded: str | None, expected: str | None) -> bool:
         True when both constraints that exist are satisfied.
     """
     if recorded is not None and recorded != actual:
+        return False
+
+    if expected is None and recorded is None:
         return False
 
     return expected is None or actual == expected

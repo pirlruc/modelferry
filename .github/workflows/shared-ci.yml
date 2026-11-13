@@ -1,0 +1,98 @@
+# commondevops reusable workflows. Pin is the peeled commit of annotated tag v6.2.0.
+name: shared-ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: shared-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  infra-lint:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read
+      packages: read
+    uses: pirlruc/commondevops/.github/workflows/common-infra-lint.yml@1e0c029bf93705f399f2a3a7e5f19810c101da65
+    with:
+      blocking: true
+      run_shfmt: true
+      shell_scripts: scripts/*.sh
+      scripts_ref: 1e0c029bf93705f399f2a3a7e5f19810c101da65
+      container_image: ghcr.io/catthehacker/ubuntu:act-24.04@sha256:dff4ec57d90046a7283aafc314298380be82bfeccb9ad0f1b36c4ebe74aabe78
+      mount_runner_git: false
+
+  doc-verify:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read
+    uses: pirlruc/commondevops/.github/workflows/common-doc-verify.yml@1e0c029bf93705f399f2a3a7e5f19810c101da65
+    with:
+      blocking: true
+      run_link_lint: true
+      run_markdownlint: true
+      run_shfmt: true
+      scripts_ref: 1e0c029bf93705f399f2a3a7e5f19810c101da65
+
+  scaffold-verify:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read
+      issues: read
+    uses: pirlruc/commondevops/.github/workflows/common-scaffold-verify.yml@1e0c029bf93705f399f2a3a7e5f19810c101da65
+    with:
+      blocking: true
+      scripts_ref: 1e0c029bf93705f399f2a3a7e5f19810c101da65
+    secrets:
+      packs_token: ${{ secrets.GUARDRAILS_READ_TOKEN }}
+
+  secrets-sast:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read
+      packages: read
+    uses: pirlruc/commondevops/.github/workflows/common-secrets-sast.yml@1e0c029bf93705f399f2a3a7e5f19810c101da65
+    with:
+      blocking: true
+      semgrep_config: p/python
+      scripts_ref: 1e0c029bf93705f399f2a3a7e5f19810c101da65
+      container_image: ghcr.io/catthehacker/ubuntu:act-24.04@sha256:dff4ec57d90046a7283aafc314298380be82bfeccb9ad0f1b36c4ebe74aabe78
+      mount_runner_git: false
+
+  supply-chain:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read
+      actions: read
+      packages: read
+      security-events: write
+    uses: pirlruc/commondevops/.github/workflows/common-supply-chain.yml@1e0c029bf93705f399f2a3a7e5f19810c101da65
+    with:
+      blocking: true
+      scripts_ref: 1e0c029bf93705f399f2a3a7e5f19810c101da65
+      container_image: ghcr.io/catthehacker/ubuntu:act-24.04@sha256:dff4ec57d90046a7283aafc314298380be82bfeccb9ad0f1b36c4ebe74aabe78
+      mount_runner_git: false
+
+  pins:
+    permissions:
+      contents: read
+    uses: pirlruc/commondevops/.github/workflows/common-pins-verify.yml@1e0c029bf93705f399f2a3a7e5f19810c101da65
+    with:
+      pin_script: scripts/check-submodule-pins.sh
+      scripts_ref: 1e0c029bf93705f399f2a3a7e5f19810c101da65
+
+  token-audit:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read
+    uses: pirlruc/commondevops/.github/workflows/common-token-audit.yml@1e0c029bf93705f399f2a3a7e5f19810c101da65
+    with:
+      scripts_ref: 1e0c029bf93705f399f2a3a7e5f19810c101da65
+    secrets:
+      guardrails_token: ${{ secrets.GUARDRAILS_READ_TOKEN }}
