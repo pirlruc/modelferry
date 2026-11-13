@@ -25,9 +25,8 @@ jobs:
       run_shfmt: true
       shell_scripts: scripts/*.sh
       scripts_ref: 1e0c029bf93705f399f2a3a7e5f19810c101da65
-      container_username: pirlruc
-    secrets:
-      container_token: ${{ secrets.COMMONDEVOPS_READ_TOKEN }}
+      install_runner_packages: true
+      container_image: ubuntu:24.04
 
   doc-verify:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
@@ -63,9 +62,8 @@ jobs:
       blocking: true
       semgrep_config: p/python
       scripts_ref: 1e0c029bf93705f399f2a3a7e5f19810c101da65
-      container_username: pirlruc
-    secrets:
-      container_token: ${{ secrets.COMMONDEVOPS_READ_TOKEN }}
+      install_runner_packages: true
+      container_image: ubuntu:24.04
 
   supply-chain:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
@@ -78,9 +76,8 @@ jobs:
     with:
       blocking: true
       scripts_ref: 1e0c029bf93705f399f2a3a7e5f19810c101da65
-      container_username: pirlruc
-    secrets:
-      container_token: ${{ secrets.COMMONDEVOPS_READ_TOKEN }}
+      install_runner_packages: true
+      container_image: ubuntu:24.04
 
   pins:
     permissions:
