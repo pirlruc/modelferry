@@ -13,7 +13,9 @@ _UNLEASH = "/api/v4/feature_flags/unleash/42/client/features"
 _REST = "/api/v4/projects/42/feature_flags/model_route"
 
 
-def _variant_flag(payload: dict[str, object], *, enabled: bool = True) -> dict[str, object]:
+def _variant_flag(
+    payload: dict[str, object], *, enabled: bool = True
+) -> dict[str, object]:
     return {
         "version": 1,
         "features": [
@@ -40,11 +42,17 @@ def test_unleash_variant_payload_resolves_coordinates(tmp_path: Path) -> None:
         "GET",
         _UNLEASH,
         json_body=_variant_flag(
-            {"model_name": "fraud_detector", "version": "v1.4.0", "file_name": "model.onnx"},
+            {
+                "model_name": "fraud_detector",
+                "version": "v1.4.0",
+                "file_name": "model.onnx",
+            },
         ),
     )
     with open_fetcher(mock, tmp_path, token="test-token") as fetcher:
-        resolution = fetcher.get_feature_flag(42, "model_route", context={"user_id": "alice"})
+        resolution = fetcher.get_feature_flag(
+            42, "model_route", context={"user_id": "alice"}
+        )
 
     assert resolution.is_enabled is True
     assert resolution.resolved_model is not None
@@ -74,8 +82,13 @@ def test_rest_strategy_payload_and_environment_scope(tmp_path: Path) -> None:
         },
     )
     client = mock.client()
-    with client, ModelFetcher(token="test-token", cache_dir=tmp_path, client=client) as fetcher:
-        matched = fetcher.get_feature_flag(42, "model_route", context={"environment": "staging"})
+    with (
+        client,
+        ModelFetcher(token="test-token", cache_dir=tmp_path, client=client) as fetcher,
+    ):
+        matched = fetcher.get_feature_flag(
+            42, "model_route", context={"environment": "staging"}
+        )
         missed = fetcher.get_feature_flag(
             42,
             "model_route",
@@ -112,9 +125,16 @@ def test_user_strategy_filters_the_payload(tmp_path: Path) -> None:
         },
     )
     client = mock.client()
-    with client, ModelFetcher(token="test-token", cache_dir=tmp_path, client=client) as fetcher:
-        allowed = fetcher.get_feature_flag(42, "model_route", context={"user_id": "bob"})
-        blocked = fetcher.get_feature_flag(42, "model_route", context={"user_id": "carol"})
+    with (
+        client,
+        ModelFetcher(token="test-token", cache_dir=tmp_path, client=client) as fetcher,
+    ):
+        allowed = fetcher.get_feature_flag(
+            42, "model_route", context={"user_id": "bob"}
+        )
+        blocked = fetcher.get_feature_flag(
+            42, "model_route", context={"user_id": "carol"}
+        )
 
     assert allowed.resolved_model is not None
     assert allowed.resolved_model.version == "v2"
@@ -131,12 +151,18 @@ def test_disabled_and_missing_flags(tmp_path: Path) -> None:
             "name": "model_route",
             "active": False,
             "strategies": [
-                {"name": "default", "parameters": {"model_name": "fraud", "version": "v1"}},
+                {
+                    "name": "default",
+                    "parameters": {"model_name": "fraud", "version": "v1"},
+                },
             ],
         },
     )
     client = mock.client()
-    with client, ModelFetcher(token="test-token", cache_dir=tmp_path, client=client) as fetcher:
+    with (
+        client,
+        ModelFetcher(token="test-token", cache_dir=tmp_path, client=client) as fetcher,
+    ):
         disabled = fetcher.get_feature_flag(42, "model_route")
         with pytest.raises(FeatureFlagError, match="was not found"):
             fetcher.get_feature_flag(42, "missing")
@@ -154,9 +180,13 @@ def test_unleash_without_private_token(tmp_path: Path) -> None:
         json_body=_variant_flag({"model_name": "fraud_detector", "version": "v9"}),
     )
     with open_fetcher(mock, tmp_path, unleash_app_name="staging") as fetcher:
-        resolution = fetcher.get_feature_flag(42, "model_route", context={"environment": "qa"})
+        resolution = fetcher.get_feature_flag(
+            42, "model_route", context={"environment": "qa"}
+        )
         with pytest.raises(FeatureFlagError, match="header value"):
-            fetcher.get_feature_flag(42, "model_route", context={"environment": "qa\r\nX: 1"})
+            fetcher.get_feature_flag(
+                42, "model_route", context={"environment": "qa\r\nX: 1"}
+            )
 
     assert resolution.resolved_model is not None
     assert resolution.resolved_model.version == "v9"
@@ -185,9 +215,16 @@ def test_gradual_rollout_percentage(tmp_path: Path) -> None:
     mock.push("GET", _REST, json_body=flag("100"))
     mock.add("GET", _REST, json_body=flag("100"))
     client = mock.client()
-    with client, ModelFetcher(token="test-token", cache_dir=tmp_path, client=client) as fetcher:
-        blocked = fetcher.get_feature_flag(42, "model_route", context={"user_id": "alice"})
-        allowed = fetcher.get_feature_flag(42, "model_route", context={"user_id": "alice"})
+    with (
+        client,
+        ModelFetcher(token="test-token", cache_dir=tmp_path, client=client) as fetcher,
+    ):
+        blocked = fetcher.get_feature_flag(
+            42, "model_route", context={"user_id": "alice"}
+        )
+        allowed = fetcher.get_feature_flag(
+            42, "model_route", context={"user_id": "alice"}
+        )
         anonymous = fetcher.get_feature_flag(42, "model_route")
 
     assert blocked.is_enabled is False

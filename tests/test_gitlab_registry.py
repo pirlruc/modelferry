@@ -7,7 +7,11 @@ import httpx
 import pytest
 
 from model_fetcher import ModelFetcher
-from model_fetcher.exceptions import AuthenticationError, DownloadError, ModelNotFoundError
+from model_fetcher.exceptions import (
+    AuthenticationError,
+    DownloadError,
+    ModelNotFoundError,
+)
 from tests.support import GitLabMock
 
 _PAYLOAD = b"model-bytes"
@@ -63,7 +67,9 @@ def test_force_download_fetches_again(tmp_path: Path) -> None:
     client, fetcher = _fetcher(mock, tmp_path)
     with client, fetcher:
         fetcher.download_model(42, "fraud", "v1", file_name="model.onnx")
-        fetcher.download_model(42, "fraud", "v1", file_name="model.onnx", force_download=True)
+        fetcher.download_model(
+            42, "fraud", "v1", file_name="model.onnx", force_download=True
+        )
 
     assert mock.paths().count(_FILE) == 2
 
@@ -75,7 +81,9 @@ def test_generic_package_fallback_and_project_path(tmp_path: Path) -> None:
     mock.add("GET", encoded, content=_PAYLOAD)
     client, fetcher = _fetcher(mock, tmp_path)
     with client, fetcher:
-        path = fetcher.download_model("group/app", "fraud", "v1", file_name="model.onnx")
+        path = fetcher.download_model(
+            "group/app", "fraud", "v1", file_name="model.onnx"
+        )
 
     assert path.read_bytes() == _PAYLOAD
     assert encoded in mock.paths()
@@ -84,7 +92,9 @@ def test_generic_package_fallback_and_project_path(tmp_path: Path) -> None:
 def test_version_lookup_by_name_then_download(tmp_path: Path) -> None:
     """Name-based model and version lists resolve the numeric package id."""
     mock = GitLabMock()
-    mock.add("GET", "/api/v4/projects/42/ml/models", json_body=[{"id": 3, "name": "fraud"}])
+    mock.add(
+        "GET", "/api/v4/projects/42/ml/models", json_body=[{"id": 3, "name": "fraud"}]
+    )
     mock.add(
         "GET",
         "/api/v4/projects/42/ml/models/3/versions",
@@ -142,11 +152,18 @@ def test_checksum_mismatch_raises_and_writes_nothing(tmp_path: Path) -> None:
     ("status", "error"),
     [(401, AuthenticationError), (403, AuthenticationError), (404, ModelNotFoundError)],
 )
-def test_registry_http_errors(tmp_path: Path, status: int, error: type[Exception]) -> None:
+def test_registry_http_errors(
+    tmp_path: Path, status: int, error: type[Exception]
+) -> None:
     """401 and 403 are authentication errors and 404 is a missing model."""
     mock = GitLabMock()
     mock.add("GET", _VERSION, status=status, json_body={"message": "denied"})
-    mock.add("GET", "/api/v4/projects/42/ml/models", status=status, json_body={"message": "denied"})
+    mock.add(
+        "GET",
+        "/api/v4/projects/42/ml/models",
+        status=status,
+        json_body={"message": "denied"},
+    )
     mock.add("GET", _GENERIC, status=status, json_body={"message": "denied"})
     client, fetcher = _fetcher(mock, tmp_path)
     with client, fetcher, pytest.raises(error):
@@ -210,7 +227,12 @@ def test_same_origin_and_https_upgrade_keep_credentials(tmp_path: Path) -> None:
     """Redirects that stay on the GitLab host still send the token."""
     mock = GitLabMock()
     mock.add("GET", _VERSION, json_body=_version_document())
-    mock.add("GET", _FILE, status=302, headers={"location": "/api/v4/projects/42/files/final.onnx"})
+    mock.add(
+        "GET",
+        _FILE,
+        status=302,
+        headers={"location": "/api/v4/projects/42/files/final.onnx"},
+    )
     mock.add("GET", "/api/v4/projects/42/files/final.onnx", content=_PAYLOAD)
     client, fetcher = _fetcher(mock, tmp_path)
     with client, fetcher:
@@ -260,7 +282,9 @@ def test_refuses_unsafe_or_endless_redirects(tmp_path: Path) -> None:
 
     loop = GitLabMock()
     loop.add("GET", _VERSION, json_body=_version_document())
-    loop.add("GET", _FILE, status=302, headers={"location": "https://gitlab.com" + _FILE})
+    loop.add(
+        "GET", _FILE, status=302, headers={"location": "https://gitlab.com" + _FILE}
+    )
     client, fetcher = _fetcher(loop, tmp_path / "loop")
     with client, fetcher, pytest.raises(DownloadError, match="redirect limit"):
         fetcher.download_model(42, "fraud", "v1", file_name="model.onnx")
@@ -270,8 +294,11 @@ def test_transient_error_is_retried_and_storage_403_is_a_download_error(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A GitLab 503 is retried, and object storage 403 is not an authentication error."""
-    monkeypatch.setattr("model_fetcher.providers.gitlab.http._pause", lambda _attempt: None)
+    """A GitLab 503 is retried, and object storage 403 is not an authentication
+    error."""
+    monkeypatch.setattr(
+        "model_fetcher.providers.gitlab.http._pause", lambda _attempt: None
+    )
     mock = GitLabMock()
     mock.add("GET", _VERSION, json_body=_version_document())
     mock.push("GET", _FILE, status=503, content=b"busy")
@@ -307,7 +334,12 @@ def test_model_list_stops_when_the_name_is_found(tmp_path: Path) -> None:
         json_body=[{"id": 3, "name": "fraud"}],
         headers={"x-next-page": "2"},
     )
-    mock.add("GET", "/api/v4/projects/42/ml/models", status=500, json_body={"message": "nope"})
+    mock.add(
+        "GET",
+        "/api/v4/projects/42/ml/models",
+        status=500,
+        json_body={"message": "nope"},
+    )
     mock.add(
         "GET",
         "/api/v4/projects/42/ml/models/3/versions",

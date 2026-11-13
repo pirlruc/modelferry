@@ -1,7 +1,9 @@
 """Show how an inference package consumes model-fetcher.
 
-The functions below are the integration boundary. They return a filesystem path. Loading that
-path with joblib, PyTorch, ONNX Runtime, or scikit-learn belongs to the caller. Those imports are
+The functions below are the integration boundary. They return a filesystem
+path. Loading that
+path with joblib, PyTorch, ONNX Runtime, or scikit-learn belongs to the caller.
+Those imports are
 intentionally absent from this file.
 """
 
@@ -10,7 +12,9 @@ from pathlib import Path
 from model_fetcher import ModelFetcher
 
 
-def fetch_direct(project_id: str, model_name: str, version: str, file_name: str) -> Path:
+def fetch_direct(
+    project_id: str, model_name: str, version: str, file_name: str
+) -> Path:
     """Download one known model version.
 
     Args:
@@ -31,7 +35,9 @@ def fetch_direct(project_id: str, model_name: str, version: str, file_name: str)
         )
 
 
-def fetch_from_flag(project_id: str, flag_name: str, user_id: str, environment: str) -> Path:
+def fetch_from_flag(
+    project_id: str, flag_name: str, user_id: str, environment: str
+) -> Path:
     """Download the model named by a feature flag.
 
     Args:

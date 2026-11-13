@@ -31,7 +31,8 @@ class ModelCoordinates(BaseModel):
         project_id: Registry project id or URL path, such as ``42`` or ``group/app``.
         model_name: Model or generic package name.
         version: Model version or generic package version.
-        file_name: Artifact file name. Empty when the registry must choose the only file.
+        file_name: Artifact file name. Empty when the registry must choose the
+        only file.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -144,7 +145,9 @@ class DownloadResult(BaseModel):
         if text.startswith("sha256:"):
             text = text.removeprefix("sha256:")
 
-        if len(text) != 64 or any(character not in "0123456789abcdef" for character in text):
+        if len(text) != 64 or any(
+            character not in "0123456789abcdef" for character in text
+        ):
             raise ValueError("sha256_hash must be 64 hexadecimal characters")
 
         return text

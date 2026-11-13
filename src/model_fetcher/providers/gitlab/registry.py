@@ -13,7 +13,11 @@ from model_fetcher.cache import CacheManager, normalize_sha256
 from model_fetcher.config import FetcherConfig
 from model_fetcher.exceptions import DownloadError, ModelNotFoundError
 from model_fetcher.models import DownloadResult, ModelCoordinates
-from model_fetcher.providers.gitlab.http import GitLabHttp, _checksum_header, project_path
+from model_fetcher.providers.gitlab.http import (
+    GitLabHttp,
+    _checksum_header,
+    project_path,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +32,7 @@ class GitLabRegistryProvider(BaseRegistryProvider):
 
     1. ``GET /api/v4/projects/:id/ml/models/:model_name/versions/:version``.
     2. If that route is absent, list models and versions and match by name.
-    3. ``GET /api/v4/projects/:id/packages/ml_models/:model_version_id/files/:file_name``.
+    3. ``GET .../packages/ml_models/:model_version_id/files/:file_name``.
 
     When the model registry has no such version and ``file_name`` is set, the
     provider falls back to the generic package route
@@ -90,7 +94,8 @@ class GitLabRegistryProvider(BaseRegistryProvider):
             )
 
         versions = self._http.get_pages(
-            f"/api/v4/projects/{project}/ml/models/{quote(str(model['id']), safe='')}/versions",
+            f"/api/v4/projects/{project}/ml/models/"
+            f"{quote(str(model['id']), safe='')}/versions",
         )
         version = _find_version(versions, coordinates.version)
         if version is None or "id" not in version:
@@ -126,7 +131,9 @@ class GitLabRegistryProvider(BaseRegistryProvider):
             AuthenticationError: If GitLab rejects the token.
             DownloadError: If the stream is incomplete or the checksum does not match.
         """
-        cached = self._cached_named_file(coordinates, target_dir, force_download=force_download)
+        cached = self._cached_named_file(
+            coordinates, target_dir, force_download=force_download
+        )
         if cached is not None:
             return cached
 
@@ -318,11 +325,14 @@ class GitLabRegistryProvider(BaseRegistryProvider):
 
         names = ", ".join(name for name, _sha in files)
         raise DownloadError(
-            f"Model {coordinates.model_name!r} version {coordinates.version!r} has multiple "
+            f"Model {coordinates.model_name!r} version {coordinates.version!r} "
+            "has multiple "
             f"files ({names}). Pass file_name.",
         )
 
-    def _package_files(self, coordinates: ModelCoordinates) -> list[tuple[str, str | None]]:
+    def _package_files(
+        self, coordinates: ModelCoordinates
+    ) -> list[tuple[str, str | None]]:
         """List package files associated with a model version.
 
         Args:
@@ -350,7 +360,8 @@ class GitLabRegistryProvider(BaseRegistryProvider):
                 continue
 
             listed = self._http.get_pages(
-                f"/api/v4/projects/{project}/packages/{quote(str(package['id']), safe='')}"
+                f"/api/v4/projects/{project}/packages/"
+                f"{quote(str(package['id']), safe='')}"
                 "/package_files",
             )
             if not listed:
@@ -440,7 +451,9 @@ class GitLabRegistryProvider(BaseRegistryProvider):
         logger.info("Downloading %s to %s", path, destination)
         with self._http.open_download(path) as response:
             if response.status_code == 404:
-                raise ModelNotFoundError(f"Artifact {file_name!r} was not found at {path}")
+                raise ModelNotFoundError(
+                    f"Artifact {file_name!r} was not found at {path}"
+                )
 
             expected_size = _content_length(response)
             header_sha = _checksum_header(response, self._config.base_url)
@@ -479,7 +492,9 @@ class GitLabRegistryProvider(BaseRegistryProvider):
             file_name=file_name,
             target_dir=target_dir,
         )
-        return self._cache.lookup(destination, expected_sha256=normalize_sha256(expected_sha256))
+        return self._cache.lookup(
+            destination, expected_sha256=normalize_sha256(expected_sha256)
+        )
 
 
 def _iter_bytes(response: httpx.Response) -> Iterator[bytes]:
@@ -575,7 +590,11 @@ def _find_version(items: list[Any] | None, version: str) -> dict[str, Any] | Non
         return None
 
     for item in items:
-        if isinstance(item, dict) and str(item.get("version", "")) == version and "id" in item:
+        if (
+            isinstance(item, dict)
+            and str(item.get("version", "")) == version
+            and "id" in item
+        ):
             return item
 
     return None

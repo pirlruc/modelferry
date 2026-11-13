@@ -5,7 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 
 from doc_links.fences import strip_fences
-from doc_links.parse import is_absolute_fs_path, iter_destinations, path_from_destination
+from doc_links.parse import (
+    is_absolute_fs_path,
+    iter_destinations,
+    path_from_destination,
+)
 
 
 def is_repo_relative(path_only: str) -> bool:
@@ -52,7 +56,9 @@ def _failure_message(rel: Path, raw: str, target: Path) -> str:
     return f"{rel} -> {raw}"
 
 
-def _check_relative(md_file: Path, path_only: str, raw: str, root: Path, rel: Path) -> str | None:
+def _check_relative(
+    md_file: Path, path_only: str, raw: str, root: Path, rel: Path
+) -> str | None:
     """Return a failure for a relative dest, or None when it resolves in-repo."""
     escaped = False
     for candidate in candidate_targets(md_file, path_only, root):
@@ -66,7 +72,9 @@ def _check_relative(md_file: Path, path_only: str, raw: str, root: Path, rel: Pa
     return _failure_message(rel, raw, _missing_target(md_file, path_only, root))
 
 
-def check_destination(md_file: Path, path_only: str, raw: str, root: Path, rel: Path) -> str | None:
+def check_destination(
+    md_file: Path, path_only: str, raw: str, root: Path, rel: Path
+) -> str | None:
     """Return a failure string for one destination, or None when it is ok."""
     if is_absolute_fs_path(path_only):
         return f"{rel} -> {raw} (absolute path)"

@@ -16,6 +16,8 @@ def test_rollout_is_stable_and_splits_users() -> None:
     }
     first = rollout_matches(strategy, {"user_id": "alice"})
     assert rollout_matches(strategy, {"user_id": "alice"}) is first
-    included = {rollout_matches(strategy, {"user_id": f"user-{index}"}) for index in range(80)}
+    included = {
+        rollout_matches(strategy, {"user_id": f"user-{index}"}) for index in range(80)
+    }
     assert included == {False, True}
     assert rollout_matches(strategy, {}) is False

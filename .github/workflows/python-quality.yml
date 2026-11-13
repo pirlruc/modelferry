@@ -15,7 +15,7 @@ permissions: {}
 jobs:
   python-quality:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    # Union of the job permissions in pydevops python-quality 3.5.0.
+    # Union of the job permissions in pydevops python-quality 3.6.0.
     # Dropping any of them makes the reusable workflow refuse the call.
     permissions:
       contents: write
@@ -23,7 +23,7 @@ jobs:
       packages: read
       security-events: write
       pull-requests: write
-    uses: pirlruc/pydevops/.github/workflows/python-quality.yml@cca700aebb97b442bc67150a9381c528daebcfa6
+    uses: pirlruc/pydevops/.github/workflows/python-quality.yml@297fb0f3d7a70e26f9717eb3273933b8d5123b8a
     with:
       strictness_level: Medium
       docstring_format: Google
@@ -32,7 +32,7 @@ jobs:
       working_directory: .
       python_version: "3.13"
       devops_repository: pirlruc/pydevops
-      devops_ref: cca700aebb97b442bc67150a9381c528daebcfa6
+      devops_ref: 297fb0f3d7a70e26f9717eb3273933b8d5123b8a
       app_install_command: uv sync --frozen --extra dev
     secrets:
       checkout_token: ${{ secrets.PYDEVOPS_READ_TOKEN }}

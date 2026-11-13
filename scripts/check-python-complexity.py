@@ -125,11 +125,14 @@ def _cc_failures(values: list[int], floors: dict[str, Any]) -> list[str]:
     average = statistics.mean(values)
     failures: list[str] = []
     if maximum > floors["max_cyclomatic_complexity"]:
-        failures.append(f"PY-CPLX-001: max CC {maximum} > {floors['max_cyclomatic_complexity']}")
+        failures.append(
+            f"PY-CPLX-001: max CC {maximum} > {floors['max_cyclomatic_complexity']}"
+        )
 
     if average > floors["avg_cyclomatic_complexity"]:
         failures.append(
-            f"PY-CPLX-001: avg CC {average:.2f} > {floors['avg_cyclomatic_complexity']}",
+            f"PY-CPLX-001: avg CC {average:.2f} > "
+            f"{floors['avg_cyclomatic_complexity']}",
         )
 
     return failures
@@ -154,12 +157,14 @@ def _mi_failures(scores: dict[Path, float], floors: dict[str, Any]) -> list[str]
     if lowest < floors["min_maintainability_index"]:
         worst = min(scores, key=lambda path: scores[path])
         failures.append(
-            f"PY-CPLX-002: min MI {lowest:.2f} < {floors['min_maintainability_index']} ({worst})",
+            f"PY-CPLX-002: min MI {lowest:.2f} < "
+            f"{floors['min_maintainability_index']} ({worst})",
         )
 
     if average < floors["avg_maintainability_index"]:
         failures.append(
-            f"PY-CPLX-002: avg MI {average:.2f} < {floors['avg_maintainability_index']}",
+            f"PY-CPLX-002: avg MI {average:.2f} < "
+            f"{floors['avg_maintainability_index']}",
         )
 
     return failures
@@ -187,7 +192,9 @@ def main(argv: list[str] | None = None) -> int:
     cc_max = max(complexities) if complexities else 0
     cc_avg = statistics.mean(complexities) if complexities else 0.0
     print(f"CC max={cc_max} avg={cc_avg:.2f}")
-    print(f"MI min={min(scores.values()):.2f} avg={statistics.mean(scores.values()):.2f}")
+    print(
+        f"MI min={min(scores.values()):.2f} avg={statistics.mean(scores.values()):.2f}"
+    )
     if not failures:
         print("Python complexity gates passed.")
         return 0

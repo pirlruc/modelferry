@@ -15,6 +15,7 @@ from model_fetcher.exceptions import (
     ProviderNotSupportedError,
 )
 from model_fetcher.models import FeatureFlagResolution, ModelCoordinates
+from model_fetcher.providers.github import GitHubFlagProvider, GitHubRegistryProvider
 from model_fetcher.providers.gitlab import GitLabFlagProvider, GitLabRegistryProvider
 
 ProviderPair = tuple[type[BaseRegistryProvider], type[BaseFlagProvider]]
@@ -52,6 +53,9 @@ def register_provider(
     _PROVIDERS[cleaned] = (registry_cls, flag_cls)
 
 
+register_provider("github", GitHubRegistryProvider, GitHubFlagProvider)
+
+
 class ModelFetcher:
     """Download a model file, or resolve which file a feature flag points at.
 
@@ -73,7 +77,7 @@ class ModelFetcher:
         cache_dir: str | Path | None = None,
         timeout: float = 30.0,
         *,
-        max_bytes: int | None = None,
+        max_bytes: int | None = DEFAULT_MAX_BYTES,
         allowed_project_ids: tuple[str, ...] = (),
         unleash_instance_id: str | None = None,
         unleash_app_name: str | None = None,
@@ -87,7 +91,8 @@ class ModelFetcher:
             token: Access token. Falls back to ``GITLAB_TOKEN`` then ``CI_JOB_TOKEN``.
             cache_dir: Cache root. Defaults to ``~/.cache/model_fetcher``.
             timeout: HTTP timeout in seconds.
-            max_bytes: Maximum artifact size. Defaults to 8 GiB. ``None`` is the default.
+            max_bytes: Maximum artifact size. Omit it for the 8 GiB default.
+                ``None`` does not cap the download.
             allowed_project_ids: Extra projects a flag payload may download from.
             unleash_instance_id: GitLab Unleash instance id for feature flags.
             unleash_app_name: Unleash app name, usually the environment.
@@ -105,13 +110,15 @@ class ModelFetcher:
                 token=token,
                 cache_dir=cache_dir,
                 timeout=timeout,
-                max_bytes=DEFAULT_MAX_BYTES if max_bytes is None else max_bytes,
+                max_bytes=max_bytes,
                 allowed_project_ids=allowed_project_ids,
                 unleash_instance_id=unleash_instance_id,
                 unleash_app_name=unleash_app_name,
             )
         except ValidationError as exc:
-            raise ModelFetcherError(f"Invalid model-fetcher configuration: {exc}") from exc
+            raise ModelFetcherError(
+                f"Invalid model-fetcher configuration: {exc}"
+            ) from exc
 
         pair = _PROVIDERS.get(self.config.provider)
         if pair is None:

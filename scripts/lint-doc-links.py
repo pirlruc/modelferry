@@ -55,7 +55,10 @@ def main(argv: list[str] | None = None) -> int:
     root = resolve_root(args.root)
     doc_files = collect_doc_files(root)
     if not doc_files:
-        print(f"ERROR: no markdown or Cursor-rule files found under {root}", file=sys.stderr)
+        print(
+            f"ERROR: no markdown or Cursor-rule files found under {root}",
+            file=sys.stderr,
+        )
         return 1
     failures: list[str] = []
     for md_file in doc_files:

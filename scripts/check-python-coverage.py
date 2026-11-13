@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import json
-import subprocess
+import subprocess  # nosec B404
 import sys
 from pathlib import Path
 from typing import Any
@@ -50,7 +50,7 @@ def run_pytest(root: Path) -> dict[str, Any]:
     Raises:
         SystemExit: If pytest fails.
     """
-    completed = subprocess.run(
+    completed = subprocess.run(  # nosec B603
         [
             sys.executable,
             "-m",
@@ -101,12 +101,14 @@ def main() -> int:
     failures: list[str] = []
     if statements < floors["statement_coverage"]:
         failures.append(
-            f"PY-TEST-002: statement coverage {statements:.2f} < {floors['statement_coverage']}",
+            f"PY-TEST-002: statement coverage {statements:.2f} < "
+            f"{floors['statement_coverage']}",
         )
 
     if branches < floors["branch_coverage"]:
         failures.append(
-            f"PY-TEST-002: branch coverage {branches:.2f} < {floors['branch_coverage']}",
+            f"PY-TEST-002: branch coverage {branches:.2f} < "
+            f"{floors['branch_coverage']}",
         )
 
     if not failures:

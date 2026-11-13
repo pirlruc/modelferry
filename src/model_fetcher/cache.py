@@ -5,6 +5,7 @@ from __future__ import annotations
 import fcntl
 import hashlib
 import os
+import time
 import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -34,7 +35,9 @@ def normalize_sha256(value: str | None) -> str | None:
         return None
 
     text = value.strip().lower().removeprefix("sha256:")
-    if len(text) != _SHA256_LENGTH or any(char not in "0123456789abcdef" for char in text):
+    if len(text) != _SHA256_LENGTH or any(
+        char not in "0123456789abcdef" for char in text
+    ):
         raise DownloadError(f"Invalid SHA-256 checksum: {value!r}")
 
     return text
@@ -76,7 +79,13 @@ def file_sha256(path: Path) -> str:
 
     Returns:
         Lowercase hexadecimal digest.
+
+    Raises:
+        DownloadError: If ``path`` is a symbolic link.
     """
+    if path.is_symlink():
+        raise DownloadError(f"Refusing to hash a symlink: {path}")
+
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         while True:
@@ -90,7 +99,7 @@ def file_sha256(path: Path) -> str:
 
 
 class CacheManager:
-    """Store artifacts under ``<cache>/<provider>/<project>/<model>/<version>/<file>``."""
+    """Store artifacts under ``cache/provider/project/model/version/file``."""
 
     def __init__(self, cache_dir: Path) -> None:
         """Create a cache rooted at ``cache_dir``.
@@ -124,7 +133,7 @@ class CacheManager:
             Destination path for the artifact.
 
         Raises:
-            DownloadError: If any path field is unsafe, or ``file_name`` contains a slash.
+            DownloadError: If a path field is unsafe or ``file_name`` has a slash.
         """
         if "/" in file_name:
             raise DownloadError("file_name must be a single path segment")
@@ -163,7 +172,7 @@ class CacheManager:
         Returns:
             A cached result, or ``None`` when the file should be downloaded again.
         """
-        if not path.is_file():
+        if path.is_symlink() or not path.is_file():
             return None
 
         with _file_lock(path.with_name(path.name + ".lock"), fcntl.LOCK_SH):
@@ -342,12 +351,14 @@ def _assert_complete(
 
     if expected_size is not None and size != expected_size:
         raise DownloadError(
-            f"Incomplete download for {name}: received {size} bytes, expected {expected_size}",
+            f"Incomplete download for {name}: got {size} bytes, "
+            f"expected {expected_size}",
         )
 
     if expected_sha256 is not None and file_hash != expected_sha256:
         raise DownloadError(
-            f"SHA-256 mismatch for {name}: expected {expected_sha256}, computed {file_hash}",
+            f"SHA-256 mismatch for {name}: expected {expected_sha256}, "
+            f"computed {file_hash}",
         )
 
 
@@ -407,7 +418,9 @@ def _partial_name(name: str) -> str:
     return f"{name}.downloading.{os.getpid()}.{uuid.uuid4().hex}"
 
 
-def _reject_declared_size(name: str, expected_size: int | None, max_bytes: int | None) -> None:
+def _reject_declared_size(
+    name: str, expected_size: int | None, max_bytes: int | None
+) -> None:
     """Reject a content length that is already over the cap.
 
     Args:
@@ -445,6 +458,40 @@ def _file_lock(path: Path, mode: int) -> Iterator[None]:
             fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
+_PARTIAL_MAX_AGE_SECONDS = 60 * 60
+
+
+def _stale_partial(path: Path) -> bool:
+    """Return whether a ``.downloading`` file is from a dead or old writer.
+
+    Args:
+        path: Temporary download path ``<name>.downloading.<pid>.<uuid>``.
+
+    Returns:
+        True when the recorded pid is not running, or the file is older than an hour.
+    """
+    marker = ".downloading."
+    index = path.name.rfind(marker)
+    if index < 0:
+        return False
+    pid_text = path.name[index + len(marker) :].split(".", 1)[0]
+    try:
+        pid = int(pid_text)
+    except ValueError:
+        return True
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return True
+    except PermissionError:
+        return False
+    try:
+        age = time.time() - path.stat().st_mtime
+    except OSError:
+        return True
+    return age > _PARTIAL_MAX_AGE_SECONDS
+
+
 def _cache_file_ready(path: Path) -> bool:
     """Return whether ``path`` is a finished non-empty file.
 
@@ -458,7 +505,14 @@ def _cache_file_ready(path: Path) -> bool:
         return False
 
     prefix = f"{path.name}.downloading."
-    return not any(child.name.startswith(prefix) for child in path.parent.iterdir())
+    for child in path.parent.iterdir():
+        if not child.name.startswith(prefix):
+            continue
+        if _stale_partial(child):
+            child.unlink(missing_ok=True)
+            continue
+        return False
+    return True
 
 
 def _sidecar_digest(path: Path) -> str | None:
@@ -481,7 +535,9 @@ def _sidecar_digest(path: Path) -> str | None:
     return recorded[0].lower()
 
 
-def _sidecar_can_be_trusted(path: Path, recorded: str | None, expected: str | None) -> bool:
+def _sidecar_can_be_trusted(
+    path: Path, recorded: str | None, expected: str | None
+) -> bool:
     """Return whether the sidecar may stand in for a full-file hash.
 
     Args:

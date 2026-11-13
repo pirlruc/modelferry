@@ -9,7 +9,9 @@ from model_fetcher.config import FetcherConfig, default_cache_dir
 from model_fetcher.exceptions import ModelFetcherError
 
 
-def test_token_falls_back_to_personal_access_token(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_token_falls_back_to_personal_access_token(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """GITLAB_TOKEN is sent as PRIVATE-TOKEN when the constructor omits a token."""
     monkeypatch.setenv("GITLAB_TOKEN", "personal-token")
     monkeypatch.setenv("CI_JOB_TOKEN", "job-token")
@@ -47,7 +49,9 @@ def test_invalid_configuration_is_a_library_error() -> None:
         ModelFetcher(base_url="ftp://gitlab.example.com", token="test-token")
 
     with pytest.raises(ModelFetcherError):
-        ModelFetcher(base_url="https://user:secret@gitlab.example.com", token="test-token")
+        ModelFetcher(
+            base_url="https://user:secret@gitlab.example.com", token="test-token"
+        )
 
     with pytest.raises(ModelFetcherError):
         ModelFetcher(token="test-token\r\nX-Injected: 1")

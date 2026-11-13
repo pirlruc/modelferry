@@ -17,7 +17,8 @@ class BaseRegistryProvider(ABC):
     Subclasses are constructed with the same three collaborators so
     ``ModelFetcher`` can register new platforms without changing its methods:
 
-    ``__init__(self, config: FetcherConfig, cache: CacheManager, client: httpx.Client)``.
+    ``__init__(self, config: FetcherConfig, cache: CacheManager, client:
+    httpx.Client)``.
     """
 
     name: str
