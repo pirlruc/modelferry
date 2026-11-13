@@ -295,7 +295,7 @@ milestones:
             fetch the gitlinks.
         tasks:
           - id: REL-002-T1
-            status: open
+            status: done
             title: Add the Dependabot git credential and registry
             instructions:
               files:

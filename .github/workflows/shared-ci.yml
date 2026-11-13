@@ -95,4 +95,6 @@ jobs:
     with:
       scripts_ref: 1e0c029bf93705f399f2a3a7e5f19810c101da65
     secrets:
-      guardrails_token: ${{ secrets.GUARDRAILS_READ_TOKEN }}
+      # Dependabot runs cannot read Actions secrets. The Dependabot secret
+      # covers the same private pins and is what the expiry audit can see.
+      guardrails_token: ${{ github.event.pull_request.user.login == 'dependabot[bot]' && secrets.DEPENDABOT_GITHUB_TOKEN || secrets.GUARDRAILS_READ_TOKEN }}
