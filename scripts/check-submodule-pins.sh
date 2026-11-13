@@ -17,15 +17,15 @@ sc="$(git rev-parse 'HEAD:.github/scaffold')"
 
 status=0
 if [ "${gr}" != "${GR_EXPECT}" ]; then
-  echo "SC-DEP-004: docs/guardrails gitlink ${gr} != ${GR_TAG} ${GR_EXPECT}" >&2
-  status=1
+    echo "SC-DEP-004: docs/guardrails gitlink ${gr} != ${GR_TAG} ${GR_EXPECT}" >&2
+    status=1
 fi
 if [ "${sc}" != "${SC_EXPECT}" ]; then
-  echo "SC-DEP-004: .github/scaffold gitlink ${sc} != ${SC_TAG} ${SC_EXPECT}" >&2
-  status=1
+    echo "SC-DEP-004: .github/scaffold gitlink ${sc} != ${SC_TAG} ${SC_EXPECT}" >&2
+    status=1
 fi
 if [ "${status}" -ne 0 ]; then
-  exit 1
+    exit 1
 fi
 
 echo "SC-DEP-004: docs/guardrails @ ${GR_TAG} (${GR_EXPECT})"
