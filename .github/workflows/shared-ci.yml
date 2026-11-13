@@ -25,8 +25,8 @@ jobs:
       run_shfmt: true
       shell_scripts: scripts/*.sh
       scripts_ref: 1e0c029bf93705f399f2a3a7e5f19810c101da65
-      install_runner_packages: true
-      container_image: ubuntu:24.04
+      container_image: ghcr.io/catthehacker/ubuntu:act-24.04@sha256:dff4ec57d90046a7283aafc314298380be82bfeccb9ad0f1b36c4ebe74aabe78
+      mount_runner_git: false
 
   doc-verify:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
@@ -62,8 +62,8 @@ jobs:
       blocking: true
       semgrep_config: p/python
       scripts_ref: 1e0c029bf93705f399f2a3a7e5f19810c101da65
-      install_runner_packages: true
-      container_image: ubuntu:24.04
+      container_image: ghcr.io/catthehacker/ubuntu:act-24.04@sha256:dff4ec57d90046a7283aafc314298380be82bfeccb9ad0f1b36c4ebe74aabe78
+      mount_runner_git: false
 
   supply-chain:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
@@ -76,8 +76,8 @@ jobs:
     with:
       blocking: true
       scripts_ref: 1e0c029bf93705f399f2a3a7e5f19810c101da65
-      install_runner_packages: true
-      container_image: ubuntu:24.04
+      container_image: ghcr.io/catthehacker/ubuntu:act-24.04@sha256:dff4ec57d90046a7283aafc314298380be82bfeccb9ad0f1b36c4ebe74aabe78
+      mount_runner_git: false
 
   pins:
     permissions:
