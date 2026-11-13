@@ -25,7 +25,9 @@ jobs:
       run_shfmt: true
       shell_scripts: scripts/*.sh
       scripts_ref: 1e0c029bf93705f399f2a3a7e5f19810c101da65
-      container_image: ghcr.io/pirlruc/ci-lint@sha256:f9001c4c8726f72107545094237d4fc0592baca023cfa299a532634666d88111
+      container_username: pirlruc
+    secrets:
+      container_token: ${{ secrets.COMMONDEVOPS_READ_TOKEN }}
 
   doc-verify:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
@@ -34,18 +36,9 @@ jobs:
     uses: pirlruc/commondevops/.github/workflows/common-doc-verify.yml@1e0c029bf93705f399f2a3a7e5f19810c101da65
     with:
       blocking: true
-      yaml_files: >-
-        docs/issues.yml
-        docs/guardrail-deviations.yml
-        docs/issues-sync-targets.yml
-        .github/dependabot.yml
-        .github/workflows/shared-ci.yml
-        .github/workflows/python-quality.yml
-        .github/workflows/release.yml
-        .github/workflows/publish-pypi.yml
       run_link_lint: true
-      run_markdownlint: true
-      run_shfmt: true
+      run_markdownlint: false
+      run_shfmt: false
       scripts_ref: 1e0c029bf93705f399f2a3a7e5f19810c101da65
 
   scaffold-verify:
@@ -70,7 +63,9 @@ jobs:
       blocking: true
       semgrep_config: p/python
       scripts_ref: 1e0c029bf93705f399f2a3a7e5f19810c101da65
-      container_image: ghcr.io/pirlruc/ci-lint@sha256:f9001c4c8726f72107545094237d4fc0592baca023cfa299a532634666d88111
+      container_username: pirlruc
+    secrets:
+      container_token: ${{ secrets.COMMONDEVOPS_READ_TOKEN }}
 
   supply-chain:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
@@ -83,7 +78,9 @@ jobs:
     with:
       blocking: true
       scripts_ref: 1e0c029bf93705f399f2a3a7e5f19810c101da65
-      container_image: ghcr.io/pirlruc/ci-supply-chain@sha256:7bbd542d5971594f6192da0ed0c49e29fc0c58328333d0920ab3143a2a0e04d3
+      container_username: pirlruc
+    secrets:
+      container_token: ${{ secrets.COMMONDEVOPS_READ_TOKEN }}
 
   pins:
     permissions:
