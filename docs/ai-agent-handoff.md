@@ -427,4 +427,4 @@ quality gates from public pymjolnir.
 
 ______________________________________________________________________
 
-*Last updated: 2026-11-13 — guardrails 1.15.0, scaffold 1.12.0, commondevops v6.2.0, pydevops 3.5.0. Dependabot registries stay commented until DEPENDABOT_GITHUB_TOKEN exists. PyPI publish waits on PYPI_PUBLISH.*
+*Last updated: 2026-11-13 — guardrails 1.15.0, scaffold 1.12.0, commondevops v6.2.0, pydevops 3.5.0. GitHub Release https://github.com/pirlruc/modelferry/releases/tag/0.1.0 has the wheel, sdist, and CycloneDX bill. `release.yml` only runs on `v*.*.*`, so tag `0.1.0` has no Actions attestation. `python-quality` cannot pull private `ci-lint` / `ci-python` until this repo is granted Actions access. Dependabot registries stay commented until DEPENDABOT_GITHUB_TOKEN exists. PyPI publish waits on PYPI_PUBLISH.*
