@@ -5,6 +5,7 @@ from __future__ import annotations
 import fcntl
 import hashlib
 import os
+import time
 import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -76,7 +77,13 @@ def file_sha256(path: Path) -> str:
 
     Returns:
         Lowercase hexadecimal digest.
+
+    Raises:
+        DownloadError: If ``path`` is a symbolic link.
     """
+    if path.is_symlink():
+        raise DownloadError(f"Refusing to hash a symlink: {path}")
+
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         while True:
@@ -163,7 +170,7 @@ class CacheManager:
         Returns:
             A cached result, or ``None`` when the file should be downloaded again.
         """
-        if not path.is_file():
+        if path.is_symlink() or not path.is_file():
             return None
 
         with _file_lock(path.with_name(path.name + ".lock"), fcntl.LOCK_SH):
@@ -445,6 +452,40 @@ def _file_lock(path: Path, mode: int) -> Iterator[None]:
             fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
+_PARTIAL_MAX_AGE_SECONDS = 60 * 60
+
+
+def _stale_partial(path: Path) -> bool:
+    """Return whether a ``.downloading`` file is from a dead or old writer.
+
+    Args:
+        path: Temporary download path ``<name>.downloading.<pid>.<uuid>``.
+
+    Returns:
+        True when the recorded pid is not running, or the file is older than an hour.
+    """
+    marker = ".downloading."
+    index = path.name.rfind(marker)
+    if index < 0:
+        return False
+    pid_text = path.name[index + len(marker) :].split(".", 1)[0]
+    try:
+        pid = int(pid_text)
+    except ValueError:
+        return True
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return True
+    except PermissionError:
+        return False
+    try:
+        age = time.time() - path.stat().st_mtime
+    except OSError:
+        return True
+    return age > _PARTIAL_MAX_AGE_SECONDS
+
+
 def _cache_file_ready(path: Path) -> bool:
     """Return whether ``path`` is a finished non-empty file.
 
@@ -458,7 +499,14 @@ def _cache_file_ready(path: Path) -> bool:
         return False
 
     prefix = f"{path.name}.downloading."
-    return not any(child.name.startswith(prefix) for child in path.parent.iterdir())
+    for child in path.parent.iterdir():
+        if not child.name.startswith(prefix):
+            continue
+        if _stale_partial(child):
+            child.unlink(missing_ok=True)
+            continue
+        return False
+    return True
 
 
 def _sidecar_digest(path: Path) -> str | None:

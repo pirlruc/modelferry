@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 Release notes are updated with [Commitizen](https://github.com/commitizen-tools/commitizen)
 (`cz bump`).
 
+## 0.2.0
+
+### Added
+
+- GitHub Releases downloads and a raw-file feature flag through `provider="github"`.
+- OpenSSF Scorecard, dependency review, threshold drift, artifact sweep, and CodeQL.
+- GitHub Release builds go through pydevops `python-release.yml`. Tags are bare `X.Y.Z`.
+
+### Fixed
+
+- A cache lookup skips a symlink, and an orphaned partial is removed when its process is gone or the file is older than an hour.
+- `ModelFetcher(max_bytes=None)` leaves the download uncapped. Omitting the argument still uses 8 GiB.
+
 ## 0.1.0
 
 ### Fixed

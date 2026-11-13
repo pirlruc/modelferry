@@ -303,7 +303,7 @@ milestones:
             verification:
               - dependabot.yml registers the git registry for github.com.
       - id: GH-001
-        status: open
+        status: done
         title: Download release assets from GitHub
         decision: >-
           In the context of a second model host, facing a facade that must stay
@@ -325,7 +325,7 @@ milestones:
           - Loading or executing model bytes.
         tasks:
           - id: GH-001-T1
-            status: open
+            status: done
             title: Implement the GitHub registry and flag providers
             instructions:
               files:
@@ -473,7 +473,7 @@ milestones:
             verification:
               - uv run pytest tests/test_gitlab_flags.py
       - id: NODE-001
-        status: open
+        status: done
         title: Drop the Node 24 force flag when actions no longer need it
         decision: >-
           In the context of FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 on every
@@ -492,7 +492,7 @@ milestones:
           - The pinned actions, including gitleaks-action, still complete.
         tasks:
           - id: NODE-001-T1
-            status: open
+            status: done
             title: Remove the force flag after the action audit
             instructions:
               files:
@@ -552,7 +552,7 @@ milestones:
               - uv run python scripts/check-python-coverage.py
               - uv run pylint src tests
       - id: CIREUSE-001
-        status: open
+        status: done
         title: Reuse commondevops infra lint and supply-chain scans
         decision: >-
           In the context of the ops repositories being public for now and
@@ -562,13 +562,8 @@ milestones:
           achieve infra lint and supply-chain scans without a checkout step
           in this repo, accepting that a public caller cannot resolve a
           private uses target once those repositories are private again.
-          python-quality is not called. At pydevops 2.1.1 commit 19fa370 the
-          toolchain step runs uv tool install on pytest-cov, which has no
-          console script and exits 1. That is pydevops issue 170. The caller
-          to restore is the one in commit e7b77cc, which passes the pin as
-          devops_repository and devops_ref. PYDEVOPS_READ_TOKEN is not
-          passed because that workflow only accepts caller_pat. cppdevops
-          and containerdevops are not called.
+          python-quality is called at pydevops 3.6.0, which accepts
+          checkout_token. cppdevops and containerdevops are not called.
         overview:
           problem: Checking out an ops repository duplicates the reusable
             workflow. python-quality has no secret input for a read token.
@@ -578,12 +573,10 @@ milestones:
           target: .github/workflows/ci-infra.yml, .github/workflows/ci-supply-chain.yml
           modules: [model_fetcher]
         acceptance_criteria:
-          - ci-infra.yml and ci-supply-chain.yml call commondevops at
-            b3c462be with scripts_ref set to that same commit and pass
-            COMMONDEVOPS_READ_TOKEN.
+          - shared-ci.yml calls commondevops v6.4.0 with scripts_ref set to
+            that same commit. python-quality.yml calls pydevops 3.6.0.
           - No workflow checks out commondevops, pydevops, cppdevops, or
-            containerdevops. python-quality stays uncalled until pydevops
-            issue 170 is fixed.
+            containerdevops.
           - Jobs that need GUARDRAILS_READ_TOKEN or COMMONDEVOPS_READ_TOKEN
             skip dependabot[bot].
           - The security workflow does not use an Actions secret.
@@ -616,7 +609,7 @@ milestones:
               - rg -n 'b3c462bed0de4f6475e6be7875c4ababd831acc6' .github/workflows
               - rg -n "dependabot\\[bot\\]" .github/workflows
           - id: CIREUSE-001-T2
-            status: open
+            status: done
             title: Add the Actions secret COMMONDEVOPS_READ_TOKEN
             instructions:
               files:

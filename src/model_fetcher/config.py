@@ -71,6 +71,30 @@ def _resolve_token(explicit: str | None) -> tuple[str | None, TokenHeader]:
     return _environment_token(private_token, job_token)
 
 
+def _provider_origin(
+    provider: str,
+    base_url: str | None,
+    token: str | None,
+) -> tuple[str, str | None, TokenHeader]:
+    """Resolve the origin and token for one provider.
+
+    Args:
+        provider: Provider key. ``github`` reads ``GITHUB_URL`` and ``GITHUB_TOKEN``.
+        base_url: Explicit origin, when the caller passed one.
+        token: Explicit token, when the caller passed one.
+
+    Returns:
+        Origin, token, and the header name. GitHub still records
+        ``PRIVATE-TOKEN``; its client sends ``Authorization``.
+    """
+    if provider == "github":
+        resolved_url = base_url or _first_env("GITHUB_URL") or "https://api.github.com"
+        return resolved_url, token or _first_env("GITHUB_TOKEN"), "PRIVATE-TOKEN"
+    resolved_url = base_url or _first_env("GITLAB_URL", "CI_SERVER_URL") or _DEFAULT_BASE_URL
+    resolved_token, header = _resolve_token(token)
+    return resolved_url, resolved_token, header
+
+
 def _explicit_token(
     explicit: str,
     private_token: str | None,
@@ -376,8 +400,7 @@ class FetcherConfig(BaseModel):
         Returns:
             Frozen configuration for providers and the cache.
         """
-        resolved_url = base_url or _first_env("GITLAB_URL", "CI_SERVER_URL") or _DEFAULT_BASE_URL
-        resolved_token, header = _resolve_token(token)
+        resolved_url, resolved_token, header = _provider_origin(provider, base_url, token)
         resolved_cache = Path(cache_dir) if cache_dir is not None else default_cache_dir()
         resolved_instance = unleash_instance_id or _first_env(
             "GITLAB_UNLEASH_INSTANCE_ID",

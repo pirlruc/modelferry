@@ -97,7 +97,7 @@ def test_disabled_flag_does_not_download(tmp_path: Path) -> None:
 def test_unknown_provider() -> None:
     """Unregistered provider names fail before any network call."""
     with pytest.raises(ProviderNotSupportedError, match="not registered"):
-        ModelFetcher(provider="github", token="test-token")
+        ModelFetcher(provider="unknown-host", token="test-token")
 
 
 def test_register_provider_extends_the_facade(tmp_path: Path) -> None:

@@ -4,6 +4,7 @@ import fcntl
 import hashlib
 import os
 import threading
+import time
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -254,3 +255,36 @@ def test_target_dir_places_the_file_directly(tmp_path: Path) -> None:
         target_dir=target,
     )
     assert path == target / "model.onnx"
+
+
+def test_lookup_rejects_a_symlink(tmp_path: Path) -> None:
+    """A symlink is not a cache hit and is not hashed."""
+    cache = CacheManager(tmp_path)
+    real = tmp_path / "real.bin"
+    real.write_bytes(b"bytes")
+    link = tmp_path / "link.bin"
+    link.symlink_to(real)
+    assert cache.lookup(link, expected_sha256="a" * 64) is None
+    with pytest.raises(DownloadError, match="symlink"):
+        file_sha256(link)
+
+
+def test_dead_partial_does_not_block_a_cache_hit(tmp_path: Path) -> None:
+    """A downloading marker from a dead pid is removed and the file is reused."""
+    cache = CacheManager(tmp_path)
+    destination = cache.destination(
+        provider="gitlab",
+        project_id="42",
+        model_name="fraud",
+        version="v1",
+        file_name="model.onnx",
+    )
+    result = cache.write_atomic(destination, _chunks(b"model-bytes"), expected_sha256=None)
+    orphan = destination.with_name(f"{destination.name}.downloading.999999.{os.getpid()}")
+    # The pid in the name is this process, so age the file past the hour window.
+    orphan.write_bytes(b"partial")
+    old = time.time() - 7200
+    os.utime(orphan, (old, old))
+    cached = cache.lookup(destination, expected_sha256=result.sha256_hash)
+    assert cached is not None
+    assert not orphan.exists()

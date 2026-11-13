@@ -1,55 +1,23 @@
----
 name: Release
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   push:
-    tags: [v*.*.*]
-permissions:
-  contents: read
+    # GitHub tag filters are globs. This matches a bare X.Y.Z tag.
+    tags: ["[0-9]*.[0-9]*.[0-9]*"]
+
+permissions: {}
+
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: release-${{ github.ref }}
   cancel-in-progress: false
+
 jobs:
   github-release:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
     permissions:
       contents: write
       id-token: write
       attestations: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Require an annotated tag
-        run: |
-          tag="${GITHUB_REF#refs/tags/}"
-          kind="$(git cat-file -t "refs/tags/${tag}")"
-          test "${kind}" = "tag"
-      - name: Set up Python
-        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
-        with:
-          python-version: '3.13'
-      - name: Set up uv
-        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2  # v10.3.3
-        with:
-          # Release builds must not restore a shared cache (zizmor cache-poisoning).
-          enable-cache: false
-      - name: Sync project and dev dependencies
-        run: uv sync --frozen --extra dev
-      - name: Build distributions
-        run: uv build
-      - name: CycloneDX SBOM
-        run: uv run --with cyclonedx-bom cyclonedx-py environment --output-file dist/sbom.cdx.json
-      - name: Attest build provenance
-        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8  # v4.2.2
-        with:
-          subject-path: dist/*
-      - name: Publish GitHub Release
-        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3  # v3
-        with:
-          files: dist/*
-          generate_release_notes: true
+    uses: pirlruc/pydevops/.github/workflows/python-release.yml@297fb0f3d7a70e26f9717eb3273933b8d5123b8a
+    with:
+      python_version: "3.13"
+      working_directory: .
