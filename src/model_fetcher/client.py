@@ -8,7 +8,7 @@ from pydantic import ValidationError
 
 from model_fetcher.base import BaseFlagProvider, BaseRegistryProvider
 from model_fetcher.cache import CacheManager
-from model_fetcher.config import FetcherConfig
+from model_fetcher.config import DEFAULT_MAX_BYTES, FetcherConfig
 from model_fetcher.exceptions import (
     FeatureFlagError,
     ModelFetcherError,
@@ -65,7 +65,7 @@ class ModelFetcher:
         ...     path = fetcher.download_model(42, "fraud_detector", "v1.4.0")
     """
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-locals
         self,
         provider: str = "gitlab",
         base_url: str | None = None,
@@ -74,6 +74,7 @@ class ModelFetcher:
         timeout: float = 30.0,
         *,
         max_bytes: int | None = None,
+        allowed_project_ids: tuple[str, ...] = (),
         unleash_instance_id: str | None = None,
         unleash_app_name: str | None = None,
         client: httpx.Client | None = None,
@@ -86,7 +87,8 @@ class ModelFetcher:
             token: Access token. Falls back to ``GITLAB_TOKEN`` then ``CI_JOB_TOKEN``.
             cache_dir: Cache root. Defaults to ``~/.cache/model_fetcher``.
             timeout: HTTP timeout in seconds.
-            max_bytes: Optional maximum artifact size in bytes.
+            max_bytes: Maximum artifact size. Defaults to 8 GiB. ``None`` is the default.
+            allowed_project_ids: Extra projects a flag payload may download from.
             unleash_instance_id: GitLab Unleash instance id for feature flags.
             unleash_app_name: Unleash app name, usually the environment.
             client: Optional HTTP client. When omitted, the fetcher owns a client
@@ -103,7 +105,8 @@ class ModelFetcher:
                 token=token,
                 cache_dir=cache_dir,
                 timeout=timeout,
-                max_bytes=max_bytes,
+                max_bytes=DEFAULT_MAX_BYTES if max_bytes is None else max_bytes,
+                allowed_project_ids=allowed_project_ids,
                 unleash_instance_id=unleash_instance_id,
                 unleash_app_name=unleash_app_name,
             )
@@ -250,6 +253,11 @@ class ModelFetcher:
             )
 
         model = resolution.resolved_model
+        _require_project_override(
+            str(project_id),
+            model.project_id,
+            self.config.allowed_project_ids,
+        )
         return self.download_model(
             project_id=model.project_id,
             model_name=model.model_name,
@@ -258,6 +266,29 @@ class ModelFetcher:
             target_dir=target_dir,
             force_download=force_download,
         )
+
+
+def _require_project_override(
+    flag_project: str,
+    target_project: str,
+    allowed: tuple[str, ...],
+) -> None:
+    """Reject a flag payload that names a project outside the allow list.
+
+    Args:
+        flag_project: Project that owns the flag.
+        target_project: Project the payload wants to download from.
+        allowed: Extra projects the caller has named.
+
+    Raises:
+        FeatureFlagError: If the payload leaves the flag's project without permission.
+    """
+    if target_project == flag_project or target_project in allowed:
+        return
+
+    raise FeatureFlagError(
+        f"Feature flag payload project {target_project!r} is not on the allow list",
+    )
 
 
 def _coordinates(

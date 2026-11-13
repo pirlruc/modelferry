@@ -7,6 +7,15 @@ Release notes are updated with [Commitizen](https://github.com/commitizen-tools/
 
 ## 0.1.0
 
+### Fixed
+
+- Pagination stops when `x-next-page` does not advance.
+- A token is not sent to a non-loopback `http://` origin.
+- A cache hit requires an expected digest or a matching sidecar.
+- Unknown feature-flag strategies fail closed.
+- A flag payload cannot switch project unless that project is on the allow list.
+- Downloads default to an 8 GiB cap.
+
 ### Added
 
 - `model_fetcher.ModelFetcher` for GitLab Model Registry and Generic Package downloads.

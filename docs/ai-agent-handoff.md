@@ -29,10 +29,10 @@ Issue methodology:
 | GitLab registry + generic package download       | Implemented                                        |
 | GitLab Unleash and REST flag resolution          | Implemented                                        |
 | Live GitHub epic issues                          | Sibling epics opened with `CURSOR_UPDATE_ISSUE_TOKEN`. They still need a `docs/issues.yml` sync in those repos. |
-| `docs/guardrails`                                | Gitlink tag 1.8.0 (`aa5184c`)                      |
-| `.github/scaffold`                               | Gitlink tag 1.7.0 (`e76bb3f`)                      |
-| commondevops callers                             | `uses:` tag 5.1.2 commit `b3c462be`, secret `COMMONDEVOPS_READ_TOKEN` |
-| pydevops caller                                  | Not called. `python-quality` at `19fa370` fails `uv tool install pytest-cov` ([pydevops#170](https://github.com/pirlruc/pydevops/issues/170)). `PYDEVOPS_READ_TOKEN` is unused |
+| `docs/guardrails`                                | Gitlink tag 1.15.0 (`2d4bb70`)                     |
+| `.github/scaffold`                               | Gitlink tag 1.12.0 (`9c443ea`)                     |
+| commondevops callers                             | `uses:` v6.2.0 commit `1e0c029`. Public repo, no read token on the job. |
+| pydevops caller                                  | `python-quality` at 3.5.0 (`cca700ae`). |
 | Actions secrets                                  | `GUARDRAILS_READ_TOKEN`, `COMMONDEVOPS_READ_TOKEN`, `PYDEVOPS_READ_TOKEN` |
 
 ## Commands
@@ -427,4 +427,4 @@ quality gates from public pymjolnir.
 
 ______________________________________________________________________
 
-*Last updated: 2026-09-29 UTC.*
+*Last updated: 2026-11-13 — guardrails 1.15.0, scaffold 1.12.0, commondevops v6.2.0, pydevops 3.5.0. Dependabot registries stay commented until DEPENDABOT_GITHUB_TOKEN exists. PyPI publish waits on PYPI_PUBLISH.*

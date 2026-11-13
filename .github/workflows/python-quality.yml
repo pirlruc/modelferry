@@ -1,0 +1,30 @@
+name: python-quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: python-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  python-quality:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read
+    uses: pirlruc/pydevops/.github/workflows/python-quality.yml@cca700aebb97b442bc67150a9381c528daebcfa6
+    with:
+      strictness_level: Medium
+      docstring_format: Google
+      enable_dast: false
+      installable_app: false
+      working_directory: .
+      python_version: "3.13"
+      devops_repository: pirlruc/pydevops
+      devops_ref: cca700aebb97b442bc67150a9381c528daebcfa6
+      app_install_command: uv sync --frozen --extra dev

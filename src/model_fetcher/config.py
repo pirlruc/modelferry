@@ -1,14 +1,17 @@
 """Authentication, host, and cache settings with environment fallback."""
 
+import hmac
 import os
 from pathlib import Path
 from typing import Literal, Self
 from urllib.parse import urlsplit
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 _DEFAULT_BASE_URL = "https://gitlab.com"
 _DEFAULT_APP_NAME = "production"
+DEFAULT_MAX_BYTES = 8 * 1024 * 1024 * 1024
+_LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 TokenHeader = Literal["PRIVATE-TOKEN", "JOB-TOKEN"]
 
 
@@ -100,7 +103,27 @@ def _is_job_token(explicit: str, private_token: str | None, job_token: str | Non
     Returns:
         True when the constructor value should be sent as ``JOB-TOKEN``.
     """
-    return bool(job_token) and explicit == job_token and explicit != private_token
+    return (
+        bool(job_token)
+        and _same_secret(explicit, job_token)
+        and not _same_secret(explicit, private_token)
+    )
+
+
+def _same_secret(left: str | None, right: str | None) -> bool:
+    """Compare two secrets without leaking which bytes differ.
+
+    Args:
+        left: First secret.
+        right: Second secret.
+
+    Returns:
+        True when both values are set and equal.
+    """
+    if left is None or right is None:
+        return False
+
+    return hmac.compare_digest(left, right)
 
 
 def _environment_token(
@@ -172,7 +195,7 @@ class FetcherConfig(BaseModel):
         token_header: GitLab header used to send ``token``.
         cache_dir: Root directory for cached artifacts.
         timeout: HTTP timeout in seconds applied to connect, read, and write.
-        max_bytes: Maximum artifact size. ``None`` does not cap downloads.
+        max_bytes: Maximum artifact size. The default is 8 GiB. ``None`` does not cap downloads.
         unleash_instance_id: GitLab Unleash instance id, when feature flags use it.
         unleash_app_name: Unleash app name, normally the GitLab environment name.
     """
@@ -185,7 +208,8 @@ class FetcherConfig(BaseModel):
     token_header: TokenHeader
     cache_dir: Path
     timeout: float = Field(gt=0)
-    max_bytes: int | None = None
+    max_bytes: int | None = DEFAULT_MAX_BYTES
+    allowed_project_ids: tuple[str, ...] = ()
     unleash_instance_id: str | None = None
     unleash_app_name: str = _DEFAULT_APP_NAME
 
@@ -279,6 +303,25 @@ class FetcherConfig(BaseModel):
 
         return value
 
+    @model_validator(mode="after")
+    def _token_requires_tls(self) -> Self:
+        """Refuse to send a token to a non-loopback HTTP origin.
+
+        Returns:
+            This configuration.
+
+        Raises:
+            ValueError: If a token is set and the origin is not HTTPS or loopback.
+        """
+        if not self.token or not self.base_url.startswith("http://"):
+            return self
+
+        host = (urlsplit(self.base_url).hostname or "").lower()
+        if host in _LOOPBACK_HOSTS:
+            return self
+
+        raise ValueError("base_url must use https:// when a token is set")
+
     @field_validator("cache_dir")
     @classmethod
     def _absolute_cache(cls, value: Path) -> Path:
@@ -293,7 +336,7 @@ class FetcherConfig(BaseModel):
         return value.expanduser().absolute()
 
     @classmethod
-    def from_environment(
+    def from_environment(  # pylint: disable=too-many-locals
         cls,
         *,
         provider: str = "gitlab",
@@ -301,7 +344,8 @@ class FetcherConfig(BaseModel):
         token: str | None = None,
         cache_dir: str | Path | None = None,
         timeout: float = 30.0,
-        max_bytes: int | None = None,
+        max_bytes: int | None = DEFAULT_MAX_BYTES,
+        allowed_project_ids: tuple[str, ...] = (),
         unleash_instance_id: str | None = None,
         unleash_app_name: str | None = None,
     ) -> Self:
@@ -324,7 +368,8 @@ class FetcherConfig(BaseModel):
             token: Explicit access token.
             cache_dir: Explicit cache directory.
             timeout: HTTP timeout in seconds.
-            max_bytes: Optional maximum artifact size in bytes.
+            max_bytes: Maximum artifact size. Defaults to 8 GiB.
+            allowed_project_ids: Extra projects a flag payload may download from.
             unleash_instance_id: Explicit Unleash instance id.
             unleash_app_name: Explicit Unleash application or environment name.
 
@@ -351,6 +396,7 @@ class FetcherConfig(BaseModel):
             cache_dir=resolved_cache,
             timeout=timeout,
             max_bytes=max_bytes,
+            allowed_project_ids=allowed_project_ids,
             unleash_instance_id=resolved_instance,
             unleash_app_name=resolved_app,
         )

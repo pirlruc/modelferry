@@ -109,10 +109,10 @@ def test_downloading_marker_and_sidecar_mismatch_are_cache_misses(tmp_path: Path
     cache = CacheManager(tmp_path)
     destination = tmp_path / "model.onnx"
     destination.write_bytes(b"hello")
-    destination.with_name("model.onnx.downloading").write_bytes(b"partial")
+    destination.with_name("model.onnx.downloading.1.abc").write_bytes(b"partial")
     assert cache.lookup(destination) is None
 
-    destination.with_name("model.onnx.downloading").unlink()
+    destination.with_name("model.onnx.downloading.1.abc").unlink()
     Path(str(destination) + ".sha256").write_text(f"{'ab' * 32}\n", encoding="utf-8")
     assert cache.lookup(destination) is None
 

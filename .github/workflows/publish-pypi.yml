@@ -12,7 +12,9 @@ concurrency:
   cancel-in-progress: false
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    if: vars.PYPI_PUBLISH == 'true'
+    environment: pypi
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
       contents: read

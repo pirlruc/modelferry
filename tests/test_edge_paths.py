@@ -13,6 +13,7 @@ from pydantic import ValidationError
 
 from model_fetcher import ModelFetcher, register_provider
 from model_fetcher.cache import CacheManager, cache_segment, normalize_sha256
+from model_fetcher.client import _require_project_override
 from model_fetcher.config import FetcherConfig
 from model_fetcher.exceptions import (
     AuthenticationError,
@@ -31,6 +32,7 @@ from model_fetcher.providers.gitlab.flag_eval import (
     _named_feature,
     _resolution,
     _select_variant,
+    _strategy_rule,
     _variant_at_bucket,
     _variant_payload,
     _variant_weight,
@@ -423,6 +425,13 @@ def test_pagination_limits_and_generic_fallback(tmp_path: Path) -> None:
     with client, fetcher, pytest.raises(DownloadError, match="x-next-page"):
         fetcher.download_model(42, "fraud", "v1", file_name="model.onnx")
 
+    stuck = GitLabMock()
+    stuck.add("GET", _VERSION, status=404)
+    stuck.add("GET", _MODELS, json_body=[], headers={"x-next-page": "1"})
+    client, fetcher = _fetcher(stuck, tmp_path / "stuck-page")
+    with client, fetcher, pytest.raises(DownloadError, match="did not advance"):
+        fetcher.download_model(42, "fraud", "v1", file_name="model.onnx")
+
     fallback = GitLabMock()
     fallback.add("GET", _VERSION, status=404, json_body={"message": ["missing", {"id": 1}]})
     fallback.add("GET", _MODELS, json_body=[{"id": 3, "name": "fraud"}])
@@ -509,11 +518,11 @@ def test_package_file_gaps_and_stream_failure(tmp_path: Path) -> None:
 
 
 def test_cache_without_sidecar_and_optional_digest(tmp_path: Path) -> None:
-    """A finished file with no sidecar is reusable, and a missing digest stays unset."""
+    """A finished file with no sidecar or expected digest is not reused."""
     cache = CacheManager(tmp_path)
     destination = tmp_path / "plain.onnx"
     destination.write_bytes(_PAYLOAD)
-    assert cache.lookup(destination) is not None
+    assert cache.lookup(destination) is None
     result = DownloadResult(local_path=destination, is_cached=True, size_bytes=1, sha256_hash=None)
     assert result.sha256_hash is None
 
@@ -542,6 +551,12 @@ def test_parser_fallthroughs(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     assert _json_object('{"model_name": "m"}') is None
     assert _build_coordinates({"project_id": "42"}, "42", "  ", "v1") is None
+    assert _strategy_rule({"name": "default"}, {}) is True
+    assert _strategy_rule({"name": "remoteAddress"}, {}) is False
+    _require_project_override("42", "42", ())
+    with pytest.raises(FeatureFlagError, match="allow list"):
+        _require_project_override("42", "99", ())
+    _require_project_override("42", "99", ("99",))
 
 
 def _coordinates_without_file() -> ModelCoordinates:

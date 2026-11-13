@@ -231,7 +231,7 @@ def test_same_origin_and_https_upgrade_keep_credentials(tmp_path: Path) -> None:
     with (
         client,
         ModelFetcher(
-            base_url="http://gitlab.test",
+            base_url="https://gitlab.test",
             token="test-token",
             cache_dir=tmp_path / "upgrade",
             client=client,

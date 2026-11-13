@@ -226,13 +226,16 @@ def _strategy_rule(strategy: dict[str, Any], context: dict[str, Any]) -> bool:
         True when this strategy should be considered.
     """
     name = strategy.get("name")
+    if name == "default":
+        return True
+
     if name == "userWithId":
         return _user_ids_match(strategy, context)
 
     if name == "gradualRolloutUserId":
         return rollout_matches(strategy, context)
 
-    return True
+    return False
 
 
 def _user_ids_match(strategy: dict[str, Any], context: dict[str, Any]) -> bool:
