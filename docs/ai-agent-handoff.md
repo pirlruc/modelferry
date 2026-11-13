@@ -100,6 +100,14 @@ ______________________________________________________________________
 
 ## Log entries (newest first)
 
+### 2026-11-13 (UTC) — Dependabot can read the private pins
+
+**Trigger:** `DEPENDABOT_GITHUB_TOKEN` exists, and Actions can pull `ci-lint` and `ci-python`.
+
+**Actions:** `.github/dependabot.yml` registers `github-private` on the `gitsubmodule` entry. `token-audit` passes that Dependabot secret when the pull request author is Dependabot, because Actions secrets are empty on those runs. REL-002-T1 is done in `docs/issues.yml`. The epic stays open until a Dependabot run fetches the gitlinks.
+
+**Outcome:** Package access unblocked the python-quality image pull. Job 5 still fails the Medium gates already failing on `main`: code issues per KLoC 39.48 (limit 15) and Bandit 202 (limit 3).
+
 ### 2026-09-29 (UTC) — Drop the python-quality caller until the toolchain installs
 
 **Trigger:** On `e7b77cc`, DevOps coordinates resolved to pydevops and the shield
@@ -427,4 +435,4 @@ quality gates from public pymjolnir.
 
 ______________________________________________________________________
 
-*Last updated: 2026-11-13 — guardrails 1.15.0, scaffold 1.12.0, commondevops v6.2.0, pydevops 3.5.0. Dependabot registries stay commented until DEPENDABOT_GITHUB_TOKEN exists. PyPI publish waits on PYPI_PUBLISH.*
+*Last updated: 2026-11-13 — guardrails 1.15.0, scaffold 1.12.0, commondevops v6.2.0, pydevops 3.5.0. GitHub Release <https://github.com/pirlruc/modelferry/releases/tag/0.1.0> has the wheel, sdist, and CycloneDX bill. `release.yml` only runs on `v*.*.*`, so tag `0.1.0` has no Actions attestation. Actions can pull `ci-lint` and `ci-python`. Job 5 still fails the Medium KLoC and Bandit gates. Dependabot `gitsubmodule` uses `DEPENDABOT_GITHUB_TOKEN`. PyPI publish waits on PYPI_PUBLISH.*

@@ -1,7 +1,12 @@
 # SC-DEP-001/002/003. Cadence from docs/guardrails/supply-chain/profile.thresholds.yml.
-# Private submodule fetches need a Dependabot git registry and DEPENDABOT_GITHUB_TOKEN.
-# Leave that registry commented until the secret exists; an empty secret fails closed.
+# Private submodule fetches use Dependabot secret DEPENDABOT_GITHUB_TOKEN (SC-DEP-005).
 version: 2
+registries:
+  github-private:
+    type: git
+    url: https://github.com
+    username: x-access-token
+    password: ${{secrets.DEPENDABOT_GITHUB_TOKEN}}
 multi-ecosystem-groups:
   all-dependencies:
     schedule:
@@ -26,9 +31,11 @@ updates:
     directory: /
     patterns: ["*"]
     multi-ecosystem-group: all-dependencies
-  # Ungrouped. Registries stay commented until DEPENDABOT_GITHUB_TOKEN exists.
+  # Ungrouped so a non-tag tip does not block the grouped pull request (SC-DEP-004).
   - package-ecosystem: gitsubmodule
     directory: /
+    registries:
+      - github-private
     schedule:
       interval: monthly
       time: "06:00"
