@@ -7,7 +7,11 @@ from urllib.parse import urlsplit
 import httpx
 
 from model_fetcher.config import FetcherConfig
-from model_fetcher.exceptions import AuthenticationError, DownloadError, ModelNotFoundError
+from model_fetcher.exceptions import (
+    AuthenticationError,
+    DownloadError,
+    ModelNotFoundError,
+)
 
 _API_VERSION = "2022-11-28"
 
@@ -23,7 +27,9 @@ def api_headers(config: FetcherConfig, *, download: bool = False) -> dict[str, s
         Headers safe to send to the configured host.
     """
     headers = {
-        "Accept": "application/octet-stream" if download else "application/vnd.github+json",
+        "Accept": "application/octet-stream"
+        if download
+        else "application/vnd.github+json",
         "User-Agent": "model-fetcher",
         "X-GitHub-Api-Version": _API_VERSION,
     }
@@ -95,7 +101,9 @@ class GitHubHttp:
         headers = api_headers(self._config)
         headers["Accept"] = "application/vnd.github.raw+json"
         url = f"{self._config.base_url}{path}"
-        response = self._client.request("GET", url, headers=headers, follow_redirects=False)
+        response = self._client.request(
+            "GET", url, headers=headers, follow_redirects=False
+        )
         self._raise_for_status(response, path)
         payload = response.json()
         if not isinstance(payload, dict):
@@ -164,4 +172,6 @@ class GitHubHttp:
         if response.status_code == 404:
             raise ModelNotFoundError(f"GitHub resource {label} was not found")
         if response.status_code >= 400:
-            raise DownloadError(f"GitHub request for {label} failed with {response.status_code}")
+            raise DownloadError(
+                f"GitHub request for {label} failed with {response.status_code}"
+            )

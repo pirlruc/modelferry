@@ -436,7 +436,9 @@ def _variant_by_name(
     Returns:
         The matching variant, or ``None`` when the name is unknown.
     """
-    return next((variant for variant in variants if variant.get("name") == requested), None)
+    return next(
+        (variant for variant in variants if variant.get("name") == requested), None
+    )
 
 
 def _weighted_variant(
@@ -672,7 +674,11 @@ def _first_text(data: dict[str, Any], keys: tuple[str, ...]) -> str | None:
         if isinstance(value, str) and value.strip():
             return value.strip()
 
-        if isinstance(value, int) and not isinstance(value, bool) and key in _PROJECT_KEYS:
+        if (
+            isinstance(value, int)
+            and not isinstance(value, bool)
+            and key in _PROJECT_KEYS
+        ):
             return str(value)
 
     return None

@@ -60,14 +60,19 @@ def test_write_atomic_verifies_hash_and_leaves_no_partial(tmp_path: Path) -> Non
     destination = tmp_path / "gitlab" / "model.onnx"
     payload = b"model-bytes"
     expected = hashlib.sha256(payload).hexdigest()
-    result = cache.write_atomic(destination, _chunks(b"model-", b"bytes"), expected_sha256=expected)
+    result = cache.write_atomic(
+        destination, _chunks(b"model-", b"bytes"), expected_sha256=expected
+    )
     assert result.local_path == destination
     assert result.is_cached is False
     assert result.size_bytes == len(payload)
     assert result.sha256_hash == expected
     assert destination.read_bytes() == payload
     assert not destination.with_name("model.onnx.downloading").exists()
-    assert Path(str(destination) + ".sha256").read_text(encoding="utf-8").strip() == expected
+    assert (
+        Path(str(destination) + ".sha256").read_text(encoding="utf-8").strip()
+        == expected
+    )
     cached = cache.lookup(destination, expected_sha256=expected)
     assert cached is not None
     assert cached.is_cached is True
@@ -105,7 +110,9 @@ def test_size_mismatch_and_interrupted_stream_remove_partials(tmp_path: Path) ->
     assert not broken.with_name("broken.onnx.downloading").exists()
 
 
-def test_downloading_marker_and_sidecar_mismatch_are_cache_misses(tmp_path: Path) -> None:
+def test_downloading_marker_and_sidecar_mismatch_are_cache_misses(
+    tmp_path: Path,
+) -> None:
     """Interrupted or corrupted files are not reused."""
     cache = CacheManager(tmp_path)
     destination = tmp_path / "model.onnx"
@@ -229,7 +236,9 @@ def test_overlapping_writes_do_not_mix_bytes(tmp_path: Path) -> None:
         barrier.wait(timeout=5)
         cache.write_atomic(destination, _chunks(payload))
 
-    threads = [threading.Thread(target=publish, args=(payload,)) for payload in payloads]
+    threads = [
+        threading.Thread(target=publish, args=(payload,)) for payload in payloads
+    ]
     for thread in threads:
         thread.start()
 
@@ -279,8 +288,12 @@ def test_dead_partial_does_not_block_a_cache_hit(tmp_path: Path) -> None:
         version="v1",
         file_name="model.onnx",
     )
-    result = cache.write_atomic(destination, _chunks(b"model-bytes"), expected_sha256=None)
-    orphan = destination.with_name(f"{destination.name}.downloading.999999.{os.getpid()}")
+    result = cache.write_atomic(
+        destination, _chunks(b"model-bytes"), expected_sha256=None
+    )
+    orphan = destination.with_name(
+        f"{destination.name}.downloading.999999.{os.getpid()}"
+    )
     # The pid in the name is this process, so age the file past the hour window.
     orphan.write_bytes(b"partial")
     old = time.time() - 7200

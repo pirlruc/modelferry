@@ -182,7 +182,9 @@ def test_registry_list_package_and_transport_edges(tmp_path: Path) -> None:
         "/api/v4/projects/42/ml/models/3/versions",
         json_body=[{"id": 7, "version": "v1", "artifacts": [{"name": "model.onnx"}]}],
     )
-    mock.add("GET", _FILE, content=_PAYLOAD, headers={"content-length": str(len(_PAYLOAD))})
+    mock.add(
+        "GET", _FILE, content=_PAYLOAD, headers={"content-length": str(len(_PAYLOAD))}
+    )
     client, fetcher = _fetcher(mock, tmp_path)
     with client, fetcher:
         path = fetcher.download_model(42, "fraud", "v1")
@@ -274,7 +276,9 @@ def test_flag_payload_shapes(tmp_path: Path) -> None:
     description = {
         "name": "model_route",
         "active": True,
-        "description": '{"model_name": "fraud", "model_version": "v3", "project_id": 7}',
+        "description": (
+            '{"model_name": "fraud", "model_version": "v3", "project_id": 7}'
+        ),
     }
     nested = {
         "name": "model_route",
@@ -294,7 +298,10 @@ def test_flag_payload_shapes(tmp_path: Path) -> None:
             {
                 "name": "a",
                 "weight": 0,
-                "payload": {"type": "json", "value": {"model_name": "fraud", "version": "a"}},
+                "payload": {
+                    "type": "json",
+                    "value": {"model_name": "fraud", "version": "a"},
+                },
             },
             {
                 "name": "b",
@@ -316,7 +323,9 @@ def test_flag_payload_shapes(tmp_path: Path) -> None:
             "model_route",
             context={"environment": "staging"},
         )
-        from_weight = fetcher.get_feature_flag(42, "model_route", context={"variant": "b"})
+        from_weight = fetcher.get_feature_flag(
+            42, "model_route", context={"variant": "b"}
+        )
         inactive = fetcher.get_feature_flag(42, "model_route")
 
     assert from_description.resolved_model is not None
@@ -385,7 +394,9 @@ def test_flag_parsers_cover_remaining_shapes() -> None:
     assert enabled is True
     assert coordinates is None
     assert _coordinates_from_mapping("not-json", "42") is None
-    assert _coordinates_from_mapping({"payload": {"model_name": "m", "version": "v"}}, "42")
+    assert _coordinates_from_mapping(
+        {"payload": {"model_name": "m", "version": "v"}}, "42"
+    )
     invalid = _coordinates_from_mapping({"model_name": "  ", "version": "v"}, "42")
     assert invalid is None
     user = _resolution(
@@ -402,10 +413,16 @@ def test_flag_parsers_cover_remaining_shapes() -> None:
 def test_pagination_limits_and_generic_fallback(tmp_path: Path) -> None:
     """A repeating next-page header fails, and a short list still falls back."""
     pages = GitLabMock()
-    pages.add("GET", _VERSION, status=404, json_body={"message": ["missing", {"id": 1}]})
+    pages.add(
+        "GET", _VERSION, status=404, json_body={"message": ["missing", {"id": 1}]}
+    )
     for index in range(_MAX_PAGES):
-        body: list[dict[str, object]] = [{"id": 3, "name": "other"}] if index == 0 else []
-        pages.push("GET", _MODELS, json_body=body, headers={"x-next-page": str(index + 2)})
+        body: list[dict[str, object]] = (
+            [{"id": 3, "name": "other"}] if index == 0 else []
+        )
+        pages.push(
+            "GET", _MODELS, json_body=body, headers={"x-next-page": str(index + 2)}
+        )
 
     client, fetcher = _fetcher(pages, tmp_path)
     with client, fetcher, pytest.raises(DownloadError, match="pagination exceeded"):
@@ -433,7 +450,9 @@ def test_pagination_limits_and_generic_fallback(tmp_path: Path) -> None:
         fetcher.download_model(42, "fraud", "v1", file_name="model.onnx")
 
     fallback = GitLabMock()
-    fallback.add("GET", _VERSION, status=404, json_body={"message": ["missing", {"id": 1}]})
+    fallback.add(
+        "GET", _VERSION, status=404, json_body={"message": ["missing", {"id": 1}]}
+    )
     fallback.add("GET", _MODELS, json_body=[{"id": 3, "name": "fraud"}])
     fallback.add(
         "GET",
@@ -504,7 +523,10 @@ def test_package_file_gaps_and_stream_failure(tmp_path: Path) -> None:
         return offline_file.handler(request)
 
     client = httpx.Client(transport=httpx.MockTransport(handler))
-    with client, ModelFetcher(token="test-token", cache_dir=tmp_path, client=client) as fetcher:
+    with (
+        client,
+        ModelFetcher(token="test-token", cache_dir=tmp_path, client=client) as fetcher,
+    ):
         with pytest.raises(DownloadError, match="failed"):
             fetcher.download_model(42, "fraud", "v1", file_name="model.onnx")
 
@@ -523,7 +545,9 @@ def test_cache_without_sidecar_and_optional_digest(tmp_path: Path) -> None:
     destination = tmp_path / "plain.onnx"
     destination.write_bytes(_PAYLOAD)
     assert cache.lookup(destination) is None
-    result = DownloadResult(local_path=destination, is_cached=True, size_bytes=1, sha256_hash=None)
+    result = DownloadResult(
+        local_path=destination, is_cached=True, size_bytes=1, sha256_hash=None
+    )
     assert result.sha256_hash is None
 
 
@@ -540,7 +564,9 @@ def test_unleash_miss_without_a_token_returns_not_found(tmp_path: Path) -> None:
 
 def test_parser_fallthroughs(monkeypatch: pytest.MonkeyPatch) -> None:
     """Defensive parser branches stay covered without a live GitLab."""
-    assert _weighted_variant([{"name": "a", "weight": 0}, {"name": "b", "weight": "no"}], None)
+    assert _weighted_variant(
+        [{"name": "a", "weight": 0}, {"name": "b", "weight": "no"}], None
+    )
     assert _variant_weight({"weight": "no"}) == 0
     assert _variant_at_bucket([{"name": "a"}], [1], 5)["name"] == "a"
     assert _variant_payload({"payload": "raw"}) is None

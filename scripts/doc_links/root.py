@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import os
-import subprocess
+import subprocess  # nosec B404
 from pathlib import Path
 
 
 def git_toplevel(cwd: Path) -> Path | None:
     """Return ``git rev-parse --show-toplevel`` for ``cwd``, or None."""
     try:
-        completed = subprocess.run(
+        completed = subprocess.run(  # nosec B603 B607
             ["git", "rev-parse", "--show-toplevel"],
             cwd=cwd,
             check=False,

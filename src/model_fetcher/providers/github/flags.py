@@ -61,7 +61,9 @@ class GitHubFlagProvider(BaseFlagProvider):  # pylint: disable=too-few-public-me
 
         enabled = document.get("enabled")
         if not isinstance(enabled, bool):
-            raise FeatureFlagError(f"Feature flag {flag_name!r} has no boolean enabled field")
+            raise FeatureFlagError(
+                f"Feature flag {flag_name!r} has no boolean enabled field"
+            )
         coordinates = _coordinates(document, project_id) if enabled else None
         return FeatureFlagResolution(
             flag_name=flag_name,

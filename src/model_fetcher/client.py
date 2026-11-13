@@ -116,7 +116,9 @@ class ModelFetcher:
                 unleash_app_name=unleash_app_name,
             )
         except ValidationError as exc:
-            raise ModelFetcherError(f"Invalid model-fetcher configuration: {exc}") from exc
+            raise ModelFetcherError(
+                f"Invalid model-fetcher configuration: {exc}"
+            ) from exc
 
         pair = _PROVIDERS.get(self.config.provider)
         if pair is None:

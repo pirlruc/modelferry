@@ -35,7 +35,9 @@ def normalize_sha256(value: str | None) -> str | None:
         return None
 
     text = value.strip().lower().removeprefix("sha256:")
-    if len(text) != _SHA256_LENGTH or any(char not in "0123456789abcdef" for char in text):
+    if len(text) != _SHA256_LENGTH or any(
+        char not in "0123456789abcdef" for char in text
+    ):
         raise DownloadError(f"Invalid SHA-256 checksum: {value!r}")
 
     return text
@@ -97,7 +99,7 @@ def file_sha256(path: Path) -> str:
 
 
 class CacheManager:
-    """Store artifacts under ``<cache>/<provider>/<project>/<model>/<version>/<file>``."""
+    """Store artifacts under ``cache/provider/project/model/version/file``."""
 
     def __init__(self, cache_dir: Path) -> None:
         """Create a cache rooted at ``cache_dir``.
@@ -131,7 +133,7 @@ class CacheManager:
             Destination path for the artifact.
 
         Raises:
-            DownloadError: If any path field is unsafe, or ``file_name`` contains a slash.
+            DownloadError: If a path field is unsafe or ``file_name`` has a slash.
         """
         if "/" in file_name:
             raise DownloadError("file_name must be a single path segment")
@@ -349,12 +351,14 @@ def _assert_complete(
 
     if expected_size is not None and size != expected_size:
         raise DownloadError(
-            f"Incomplete download for {name}: received {size} bytes, expected {expected_size}",
+            f"Incomplete download for {name}: got {size} bytes, "
+            f"expected {expected_size}",
         )
 
     if expected_sha256 is not None and file_hash != expected_sha256:
         raise DownloadError(
-            f"SHA-256 mismatch for {name}: expected {expected_sha256}, computed {file_hash}",
+            f"SHA-256 mismatch for {name}: expected {expected_sha256}, "
+            f"computed {file_hash}",
         )
 
 
@@ -414,7 +418,9 @@ def _partial_name(name: str) -> str:
     return f"{name}.downloading.{os.getpid()}.{uuid.uuid4().hex}"
 
 
-def _reject_declared_size(name: str, expected_size: int | None, max_bytes: int | None) -> None:
+def _reject_declared_size(
+    name: str, expected_size: int | None, max_bytes: int | None
+) -> None:
     """Reject a content length that is already over the cap.
 
     Args:
@@ -529,7 +535,9 @@ def _sidecar_digest(path: Path) -> str | None:
     return recorded[0].lower()
 
 
-def _sidecar_can_be_trusted(path: Path, recorded: str | None, expected: str | None) -> bool:
+def _sidecar_can_be_trusted(
+    path: Path, recorded: str | None, expected: str | None
+) -> bool:
     """Return whether the sidecar may stand in for a full-file hash.
 
     Args:

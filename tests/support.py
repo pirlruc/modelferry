@@ -106,9 +106,13 @@ class GitLabMock:
             return httpx.Response(404, json={"message": f"no route for {path}"})
 
         if route.json_body is not None:
-            return httpx.Response(route.status, json=route.json_body, headers=route.headers)
+            return httpx.Response(
+                route.status, json=route.json_body, headers=route.headers
+            )
 
-        return httpx.Response(route.status, content=route.content, headers=route.headers)
+        return httpx.Response(
+            route.status, content=route.content, headers=route.headers
+        )
 
     def client(self) -> httpx.Client:
         """Build a client that never touches the network.
@@ -124,7 +128,10 @@ class GitLabMock:
         Returns:
             URL paths without query strings.
         """
-        return [call.url.raw_path.decode("ascii").split("?", maxsplit=1)[0] for call in self.calls]
+        return [
+            call.url.raw_path.decode("ascii").split("?", maxsplit=1)[0]
+            for call in self.calls
+        ]
 
     def header(self, call_index: int, name: str) -> str | None:
         """Return one request header.

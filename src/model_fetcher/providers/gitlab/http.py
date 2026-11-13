@@ -155,7 +155,9 @@ def _follow_redirects(
     current_headers = dict(headers)
     current_params = params
     for _hop in range(_MAX_REDIRECTS):
-        response = _transmit(client, current, current_headers, current_params, stream=stream)
+        response = _transmit(
+            client, current, current_headers, current_params, stream=stream
+        )
         if response.status_code not in _REDIRECT_STATUSES:
             return response
 
@@ -327,10 +329,16 @@ def _without_credentials(headers: dict[str, str]) -> dict[str, str]:
     Returns:
         The same mapping without token or Unleash identity headers.
     """
-    return {key: value for key, value in headers.items() if key.lower() not in _CREDENTIAL_HEADERS}
+    return {
+        key: value
+        for key, value in headers.items()
+        if key.lower() not in _CREDENTIAL_HEADERS
+    }
 
 
-def _page_selected(until: Callable[[list[Any]], bool] | None, payload: list[Any]) -> bool:
+def _page_selected(
+    until: Callable[[list[Any]], bool] | None, payload: list[Any]
+) -> bool:
     """Return whether pagination should stop after this page.
 
     Args:
@@ -432,10 +440,12 @@ def _one_attempt(
         The response to keep, or ``None`` when another attempt should run.
 
     Raises:
-        DownloadError: When this was the last transport failure, or a redirect is refused.
+        DownloadError: On the last transport failure, or a refused redirect.
     """
     try:
-        response = _follow_redirects(client, url, headers=headers, params=params, stream=stream)
+        response = _follow_redirects(
+            client, url, headers=headers, params=params, stream=stream
+        )
     except httpx.HTTPError as exc:
         _give_up_or_wait(attempt, path, exc)
         return None
@@ -577,7 +587,8 @@ class GitLabHttp:
             headers[self._config.token_header] = self._config.token
         elif require_token:
             raise AuthenticationError(
-                "GitLab token is missing. Pass token= or set GITLAB_TOKEN or CI_JOB_TOKEN.",
+                "GitLab token is missing. Pass token= or set GITLAB_TOKEN or "
+                "CI_JOB_TOKEN.",
             )
 
         return headers
@@ -734,7 +745,9 @@ class GitLabHttp:
             headers.update(extra_headers)
 
         url = _gitlab_url(self._config.base_url, path)
-        return _send_with_retry(self._client, url, headers, params, stream=stream, path=path)
+        return _send_with_retry(
+            self._client, url, headers, params, stream=stream, path=path
+        )
 
     def _raise_for_status(self, response: httpx.Response) -> None:
         """Raise the library error that matches an HTTP status.
@@ -747,7 +760,9 @@ class GitLabHttp:
             DownloadError: On any other status of 400 or higher, including a 401 or 403
                 from a redirect target on another host.
         """
-        if response.status_code in {401, 403} and _from_gitlab(response, self._config.base_url):
+        if response.status_code in {401, 403} and _from_gitlab(
+            response, self._config.base_url
+        ):
             raise AuthenticationError(_error_text(response))
 
         if response.status_code >= 400:

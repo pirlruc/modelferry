@@ -24,7 +24,11 @@ _DIGEST = hashlib.sha256(_PAYLOAD).hexdigest()
 def _description_payload() -> str:
     """Return a flag description that carries model coordinates."""
     return json.dumps(
-        {"model_name": "fraud_detector", "version": "v1.4.0", "file_name": "model.onnx"},
+        {
+            "model_name": "fraud_detector",
+            "version": "v1.4.0",
+            "file_name": "model.onnx",
+        },
     )
 
 
@@ -68,8 +72,13 @@ def test_download_from_feature_flag_uses_the_payload(tmp_path: Path) -> None:
         content=_PAYLOAD,
     )
     client = mock.client()
-    with client, ModelFetcher(token="test-token", cache_dir=tmp_path, client=client) as fetcher:
-        path = fetcher.download_from_feature_flag(42, "model_route", context={"user_id": "alice"})
+    with (
+        client,
+        ModelFetcher(token="test-token", cache_dir=tmp_path, client=client) as fetcher,
+    ):
+        path = fetcher.download_from_feature_flag(
+            42, "model_route", context={"user_id": "alice"}
+        )
 
     assert path.read_bytes() == _PAYLOAD
     assert path.parts[-4:] == ("42", "fraud_detector", "v1.4.0", "model.onnx")
@@ -142,7 +151,9 @@ def test_register_provider_extends_the_facade(tmp_path: Path) -> None:
             context: dict[str, Any] | None = None,
         ) -> FeatureFlagResolution:
             del project_id, context
-            return FeatureFlagResolution(flag_name=flag_name, is_enabled=False, raw_payload={})
+            return FeatureFlagResolution(
+                flag_name=flag_name, is_enabled=False, raw_payload={}
+            )
 
     register_provider("example", ExampleRegistry, ExampleFlags)
     try:

@@ -51,11 +51,15 @@ def test_download_release_asset_verifies_the_digest(tmp_path: Path) -> None:
         cache_dir=tmp_path,
         client=httpx.Client(transport=transport),
     ) as fetcher:
-        path = fetcher.download_model("acme/models", "fraud", "1.0.0", file_name="fraud.onnx")
+        path = fetcher.download_model(
+            "acme/models", "fraud", "1.0.0", file_name="fraud.onnx"
+        )
 
     assert path.read_bytes() == body
     assert path.parent.name == "1.0.0"
-    again = fetcher.download_model("acme/models", "fraud", "1.0.0", file_name="fraud.onnx")
+    again = fetcher.download_model(
+        "acme/models", "fraud", "1.0.0", file_name="fraud.onnx"
+    )
     assert again == path
     forced = fetcher.download_model(
         "acme/models",
@@ -196,15 +200,25 @@ def test_release_status_and_shape_errors(tmp_path: Path) -> None:
 
     with _github(tmp_path, handler) as fetcher:
         with pytest.raises(AuthenticationError):
-            fetcher.download_model("acme/models", "fraud", "auth", file_name="fraud.onnx")
+            fetcher.download_model(
+                "acme/models", "fraud", "auth", file_name="fraud.onnx"
+            )
         with pytest.raises(DownloadError, match="500"):
-            fetcher.download_model("acme/models", "fraud", "boom", file_name="fraud.onnx")
+            fetcher.download_model(
+                "acme/models", "fraud", "boom", file_name="fraud.onnx"
+            )
         with pytest.raises(ModelNotFoundError, match="asset"):
-            fetcher.download_model("acme/models", "fraud", "missing-asset", file_name="fraud.onnx")
+            fetcher.download_model(
+                "acme/models", "fraud", "missing-asset", file_name="fraud.onnx"
+            )
         with pytest.raises(DownloadError, match="no sha256"):
-            fetcher.download_model("acme/models", "fraud", "baddigest", file_name="fraud.onnx")
+            fetcher.download_model(
+                "acme/models", "fraud", "baddigest", file_name="fraud.onnx"
+            )
         with pytest.raises(ModelNotFoundError):
-            fetcher.download_model("acme/models", "fraud", "noassets", file_name="fraud.onnx")
+            fetcher.download_model(
+                "acme/models", "fraud", "noassets", file_name="fraud.onnx"
+            )
         with pytest.raises(DownloadError, match="owner/repo"):
             fetcher.download_model("acme", "fraud", "1.0.0", file_name="fraud.onnx")
 
@@ -239,7 +253,11 @@ def test_asset_url_and_model_name_download(tmp_path: Path) -> None:
                 200,
                 json={
                     "assets": [
-                        {"name": "fraud.onnx", "digest": f"sha256:{digest}", "size": "4"},
+                        {
+                            "name": "fraud.onnx",
+                            "digest": f"sha256:{digest}",
+                            "size": "4",
+                        },
                     ]
                 },
             )
@@ -261,11 +279,17 @@ def test_asset_url_and_model_name_download(tmp_path: Path) -> None:
 
     with _github(tmp_path, handler) as fetcher:
         with pytest.raises(DownloadError, match="not an object"):
-            fetcher.download_model("acme/models", "fraud", "list", file_name="fraud.onnx")
+            fetcher.download_model(
+                "acme/models", "fraud", "list", file_name="fraud.onnx"
+            )
         with pytest.raises(DownloadError, match="no download URL"):
-            fetcher.download_model("acme/models", "fraud", "nourl", file_name="fraud.onnx")
+            fetcher.download_model(
+                "acme/models", "fraud", "nourl", file_name="fraud.onnx"
+            )
         with pytest.raises(DownloadError, match="another host"):
-            fetcher.download_model("acme/models", "fraud", "offhost", file_name="fraud.onnx")
+            fetcher.download_model(
+                "acme/models", "fraud", "offhost", file_name="fraud.onnx"
+            )
         named = fetcher.download_model("acme/models", "fraud", "by-model")
         assert named.read_bytes() == b"data"
 
