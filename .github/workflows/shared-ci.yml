@@ -36,8 +36,8 @@ jobs:
     with:
       blocking: true
       run_link_lint: true
-      run_markdownlint: false
-      run_shfmt: false
+      run_markdownlint: true
+      run_shfmt: true
       scripts_ref: 1e0c029bf93705f399f2a3a7e5f19810c101da65
 
   scaffold-verify:

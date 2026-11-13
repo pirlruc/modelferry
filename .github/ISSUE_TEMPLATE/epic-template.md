@@ -13,15 +13,12 @@ assignees: ''
 
 **Problem:**
 
-
 **Goal:**
-
 
 ## Decision (Y-statement)
 
 <!-- Required on every new Epic. Do not delete this section. Do not rewrite an existing Epic only to add it. -->
 <!-- Format: In the context of <use case>, facing <concern>, we decided <option>, to achieve <benefit>, accepting <trade-off>. -->
-
 
 ## Out of Scope
 
@@ -46,7 +43,6 @@ Field definitions: https://github.com/pirlruc/guardrails#deviation-rule
 -->
 
 <!-- List the Guardrail IDs this epic authorizes a deviation for, or delete this section. -->
-
 
 ## References
 

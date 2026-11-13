@@ -1,0 +1,9 @@
+# Generated agent instructions and vendored trees are not authored here.
+ignores:
+  - ".github/scaffold/**"
+  - ".agents/**"
+  - "AGENTS.md"
+  - "CLAUDE.md"
+  - "SKILLS.md"
+  - ".venv/**"
+  - "docs/guardrails/**"

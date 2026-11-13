@@ -1,0 +1,4 @@
+# DOC-LINT-003. Line length and compact tables are noisy on generated
+# tables and pinned URLs. The remaining rules stay on.
+MD013: false
+MD060: false
