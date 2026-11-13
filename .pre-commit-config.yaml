@@ -33,7 +33,7 @@ repos:
         # Dependabot requires schedule.time to remain quoted strings; yamlfix removes those quotes.
         exclude: ^\.github/dependabot\.yml$
   - repo: https://github.com/pappasam/toml-sort
-    rev: v0.24.4
+    rev: v0.25.0
     hooks:
       - id: toml-sort-fix
         args:
@@ -53,7 +53,7 @@ repos:
         args: [--wrap=100, --number]
         additional_dependencies: [mdformat-gfm]
   - repo: https://github.com/crate-ci/typos
-    rev: v1.45.1
+    rev: v1.52.1
     hooks:
       - id: typos
   - repo: https://github.com/jsh9/format-json
@@ -73,7 +73,7 @@ repos:
       - id: python-check-blanket-noqa
       - id: python-check-blanket-type-ignore
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.21.2
+    rev: v3.22.0
     hooks:
       - id: pyupgrade
         args: [--py313-plus]
@@ -82,19 +82,19 @@ repos:
     hooks:
       - id: gitlint
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.12
+    rev: v0.17.4
     hooks:
       - id: ruff-check
         args: [--fix]
       - id: ruff-format
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.20.2
+    rev: v2.4.1
     hooks:
       - id: mypy
         additional_dependencies:
           - httpx==0.28.1
-          - pydantic==2.13.5
-          - pytest==9.1.1
+          - pydantic==2.14.3
+          - pytest==9.2.0
         args: [--config-file=pyproject.toml, -p, model_fetcher, -p, tests]
         pass_filenames: false
         always_run: true
@@ -109,7 +109,7 @@ repos:
       - id: bandit
         stages: [pre-push]
   - repo: https://github.com/semgrep/pre-commit
-    rev: v1.159.0
+    rev: v1.185.0
     hooks:
       - id: semgrep-ci
         # Pinned ruleset (reproducible, lighter than `auto`). Swap for `auto` or a custom `semgrep.yml` if you prefer.
