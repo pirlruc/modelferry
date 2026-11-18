@@ -31,8 +31,9 @@ Issue methodology:
 | Live GitHub epic issues                          | Sibling epics opened with `CURSOR_UPDATE_ISSUE_TOKEN`. They still need a `docs/issues.yml` sync in those repos. |
 | `docs/guardrails`                                | Gitlink tag 1.15.0 (`2d4bb70`)                     |
 | `.github/scaffold`                               | Gitlink tag 1.12.0 (`9c443ea`)                     |
-| commondevops callers                             | `uses:` v6.2.0 commit `1e0c029`. Public repo, no read token on the job. |
-| pydevops caller                                  | `python-quality` at 3.5.0 (`cca700ae`). |
+| commondevops callers                             | `uses:` v6.4.0 peeled `f7658926`. Public repo, no read token on the job. |
+| pydevops caller                                  | `python-quality` and `python-release` at 3.6.0 (`297fb0f3`). |
+| Release                                          | [0.2.0](https://github.com/pirlruc/modelferry/releases/tag/0.2.0). Tag `0.1.0` stays. PyPI Trusted Publishing stays deferred. |
 | Actions secrets                                  | `GUARDRAILS_READ_TOKEN`, `COMMONDEVOPS_READ_TOKEN`, `PYDEVOPS_READ_TOKEN` |
 
 ## Commands
@@ -99,6 +100,14 @@ Release.
 ______________________________________________________________________
 
 ## Log entries (newest first)
+
+### 2026-11-18 (UTC) — 0.2.0 is the bare tag
+
+**Trigger:** Align the release trigger, Commitizen, and the existing tags, then ship the GitHub provider.
+
+**Actions:** Callers pin commondevops v6.4.0 (`f7658926`) and pydevops 3.6.0 (`297fb0f3`). `release.yml` uses `python-release.yml` and the glob `[0-9]*.[0-9]*.[0-9]*`. Commitizen `tag_format` is `$version`. Job 5 is green after wrapping to the 88-column gate the quality image applies. The GitHub provider is in the library.
+
+**Outcome:** Release [0.2.0](https://github.com/pirlruc/modelferry/releases/tag/0.2.0) is published. Tag `0.1.0` was not moved. OPS-001 (#21, #22) and REL-002 (#26) stay open until a Dependabot submodule run succeeds. REL-001 (#24, #25) stays deferred.
 
 ### 2026-11-13 (UTC) — Dependabot can read the private pins
 
@@ -436,3 +445,4 @@ quality gates from public pymjolnir.
 ______________________________________________________________________
 
 *Last updated: 2026-11-13 — guardrails 1.15.0, scaffold 1.12.0, commondevops v6.2.0, pydevops 3.5.0. GitHub Release <https://github.com/pirlruc/modelferry/releases/tag/0.1.0> has the wheel, sdist, and CycloneDX bill. `release.yml` only runs on `v*.*.*`, so tag `0.1.0` has no Actions attestation. Actions can pull `ci-lint` and `ci-python`. Job 5 still fails the Medium KLoC and Bandit gates. Dependabot `gitsubmodule` uses `DEPENDABOT_GITHUB_TOKEN`. PyPI publish waits on PYPI_PUBLISH.*
+*Last updated: 2026-11-18 — 0.2.0 is published. Callers pin commondevops v6.4.0 (`f7658926`) and pydevops 3.6.0 (`297fb0f3`). The release glob is `[0-9]*.[0-9]*.[0-9]*`. Tag `0.1.0` stays. Job 5 is green. REL-001 stays deferred. OPS-001 and REL-002 stay open until a Dependabot submodule run succeeds.*
