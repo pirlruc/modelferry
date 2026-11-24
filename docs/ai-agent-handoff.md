@@ -29,11 +29,11 @@ Issue methodology:
 | GitLab registry + generic package download       | Implemented                                        |
 | GitLab Unleash and REST flag resolution          | Implemented                                        |
 | Live GitHub epic issues                          | Sibling epics opened with `CURSOR_UPDATE_ISSUE_TOKEN`. They still need a `docs/issues.yml` sync in those repos. |
-| `docs/guardrails`                                | Gitlink tag 1.15.0 (`2d4bb70`)                     |
-| `.github/scaffold`                               | Gitlink tag 1.12.0 (`9c443ea`)                     |
-| commondevops callers                             | `uses:` v6.4.0 peeled `f7658926`. Public repo, no read token on the job. |
-| pydevops caller                                  | `python-quality` and `python-release` at 3.6.0 (`297fb0f3`). |
-| Release                                          | [0.2.0](https://github.com/pirlruc/modelferry/releases/tag/0.2.0). Tag `0.1.0` stays. PyPI Trusted Publishing stays deferred. |
+| `docs/guardrails`                                | Gitlink tag 1.17.1 (`8508e936`)                    |
+| `.github/scaffold`                               | Gitlink tag 1.14.3 (`1fca8a3b`)                    |
+| commondevops callers                             | `uses:` v6.11.0 peeled `9350e95c`. Public repo, no read token on the job. |
+| pydevops caller                                  | `python-quality` and `python-release` at 3.10.1 (`1ebe4473`). |
+| Release                                          | [0.3.0](https://github.com/pirlruc/modelferry/releases/tag/0.3.0). The wheel verifies with `--signer-repo pirlruc/pydevops`. Tags `0.1.0` and `0.2.0` stay. REL-001, OPS-001, and REL-002 stay open. |
 | Actions secrets                                  | `GUARDRAILS_READ_TOKEN`, `COMMONDEVOPS_READ_TOKEN`, `PYDEVOPS_READ_TOKEN` |
 
 ## Commands
@@ -446,3 +446,4 @@ ______________________________________________________________________
 
 *Last updated: 2026-11-13 — guardrails 1.15.0, scaffold 1.12.0, commondevops v6.2.0, pydevops 3.5.0. GitHub Release <https://github.com/pirlruc/modelferry/releases/tag/0.1.0> has the wheel, sdist, and CycloneDX bill. `release.yml` only runs on `v*.*.*`, so tag `0.1.0` has no Actions attestation. Actions can pull `ci-lint` and `ci-python`. Job 5 still fails the Medium KLoC and Bandit gates. Dependabot `gitsubmodule` uses `DEPENDABOT_GITHUB_TOKEN`. PyPI publish waits on PYPI_PUBLISH.*
 *Last updated: 2026-11-18 — 0.2.0 is published. Callers pin commondevops v6.4.0 (`f7658926`) and pydevops 3.6.0 (`297fb0f3`). The release glob is `[0-9]*.[0-9]*.[0-9]*`. Tag `0.1.0` stays. Job 5 is green. REL-001 stays deferred. OPS-001 and REL-002 stay open until a Dependabot submodule run succeeds.*
+*Last updated: 2026-11-24 — 0.3.0 is published. Callers pin commondevops v6.11.0 (`9350e95c`) and pydevops 3.10.1 (`1ebe4473`). Guardrails 1.17.1. Scaffold 1.14.3. The wheel verifies with `--signer-repo pirlruc/pydevops`. Do not move `0.1.0` or `0.2.0`. REL-001, OPS-001, and REL-002 stay open. MF-WAVE-006 is epic #59 and task #60, both closed.*
