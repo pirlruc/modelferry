@@ -1,37 +1,14 @@
----
-name: Dependabot Metadata (Dependabot PRs only)
+name: Dependabot metadata
+
 on:
   pull_request:
     branches: [main]
-permissions:
-  contents: read
-  pull-requests: read
+
+permissions: {}
+
 jobs:
   metadata:
-    name: Summarize Dependabot dependency update
-    # This workflow intentionally skips maintainer-authored PRs.
-    # login alone is spoofable (zizmor bot-conditions). 49699333 is dependabot[bot].
-    if: github.event.pull_request.user.login == 'dependabot[bot]' && github.event.pull_request.user.id == 49699333
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    steps:
-      - name: Fetch Dependabot metadata
-        id: metadata
-        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98  # v3.1.0
-      - name: Summarize dependency update
-        env:
-          DEPENDENCY_NAMES: ${{ steps.metadata.outputs.dependency-names }}
-          DEPENDENCY_TYPE: ${{ steps.metadata.outputs.dependency-type }}
-          UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
-          PACKAGE_ECOSYSTEM: ${{ steps.metadata.outputs.package-ecosystem }}
-          DIRECTORY: ${{ steps.metadata.outputs.directory }}
-        run: |-
-          {
-            echo "## Dependabot update"
-            echo
-            echo "- Dependency names: ${DEPENDENCY_NAMES}"
-            echo "- Dependency type: ${DEPENDENCY_TYPE}"
-            echo "- Update type: ${UPDATE_TYPE}"
-            echo "- Package ecosystem: ${PACKAGE_ECOSYSTEM}"
-            echo "- Directory: ${DIRECTORY}"
-          } >> "$GITHUB_STEP_SUMMARY"
+    permissions:
+      contents: read
+      pull-requests: read
+    uses: pirlruc/commondevops/.github/workflows/common-dependabot-metadata.yml@9350e95cbb130219be113d8737469cd7c39f155c # v6.11.0

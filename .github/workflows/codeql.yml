@@ -14,22 +14,10 @@ concurrency:
 
 jobs:
   analyze:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
     permissions:
+      actions: read
       contents: read
       security-events: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@865f5f5c36632f18690a3d569fa0a764f2da0c3e # v3
-        with:
-          languages: python
-
-      - name: Analyze
-        uses: github/codeql-action/analyze@865f5f5c36632f18690a3d569fa0a764f2da0c3e # v3
+    uses: pirlruc/pydevops/.github/workflows/python-codeql.yml@1ebe447374d2fb655ee35eff578117be0c110865 # 3.10.1
+    secrets:
+      checkout_token: ${{ secrets.PYDEVOPS_READ_TOKEN }}

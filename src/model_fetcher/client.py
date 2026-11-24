@@ -1,5 +1,6 @@
 """Public facade that downloads artifacts and evaluates feature flags."""
 
+import ssl
 from pathlib import Path
 from typing import Any, Self
 
@@ -32,7 +33,7 @@ def register_provider(
 ) -> None:
     """Register a platform without changing :class:`ModelFetcher`.
 
-    Future providers such as GitHub Releases implement
+    Providers such as GitHub Releases implement
     :class:`~model_fetcher.base.BaseRegistryProvider` and
     :class:`~model_fetcher.base.BaseFlagProvider`, then call this function.
     Both classes are constructed as ``cls(config, client)`` for flags and
@@ -54,6 +55,17 @@ def register_provider(
 
 
 register_provider("github", GitHubRegistryProvider, GitHubFlagProvider)
+
+
+def _tls_context() -> ssl.SSLContext:
+    """Return a context that refuses TLS older than 1.2.
+
+    Returns:
+        A default-verify context with a TLS 1.2 floor.
+    """
+    context = ssl.create_default_context()
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
+    return context
 
 
 class ModelFetcher:
@@ -81,6 +93,7 @@ class ModelFetcher:
         allowed_project_ids: tuple[str, ...] = (),
         unleash_instance_id: str | None = None,
         unleash_app_name: str | None = None,
+        allow_local_http: bool | None = None,
         client: httpx.Client | None = None,
     ) -> None:
         """Open a fetcher for one registered provider.
@@ -96,6 +109,7 @@ class ModelFetcher:
             allowed_project_ids: Extra projects a flag payload may download from.
             unleash_instance_id: GitLab Unleash instance id for feature flags.
             unleash_app_name: Unleash app name, usually the environment.
+            allow_local_http: When true, a token may be sent to loopback HTTP.
             client: Optional HTTP client. When omitted, the fetcher owns a client
                 and closes it.
 
@@ -114,6 +128,7 @@ class ModelFetcher:
                 allowed_project_ids=allowed_project_ids,
                 unleash_instance_id=unleash_instance_id,
                 unleash_app_name=unleash_app_name,
+                allow_local_http=allow_local_http,
             )
         except ValidationError as exc:
             raise ModelFetcherError(
@@ -133,6 +148,7 @@ class ModelFetcher:
         self._client = client or httpx.Client(
             timeout=httpx.Timeout(timeout),
             follow_redirects=False,
+            verify=_tls_context(),
         )
         self.cache = CacheManager(self.config.cache_dir)
         self.registry = registry_cls(self.config, self.cache, self._client)

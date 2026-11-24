@@ -19,12 +19,12 @@ jobs:
     permissions:
       contents: read
       packages: read
-    uses: pirlruc/commondevops/.github/workflows/common-infra-lint.yml@f7658926d6236a6af3fb44b2bc5bbfd2578c1b79
+    uses: pirlruc/commondevops/.github/workflows/common-infra-lint.yml@9350e95cbb130219be113d8737469cd7c39f155c # v6.11.0
     with:
       blocking: true
       run_shfmt: true
       shell_scripts: scripts/*.sh
-      scripts_ref: f7658926d6236a6af3fb44b2bc5bbfd2578c1b79
+      scripts_ref: 9350e95cbb130219be113d8737469cd7c39f155c # v6.11.0
       container_image: ghcr.io/catthehacker/ubuntu:act-24.04@sha256:dff4ec57d90046a7283aafc314298380be82bfeccb9ad0f1b36c4ebe74aabe78
       mount_runner_git: false
 
@@ -32,23 +32,23 @@ jobs:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     permissions:
       contents: read
-    uses: pirlruc/commondevops/.github/workflows/common-doc-verify.yml@f7658926d6236a6af3fb44b2bc5bbfd2578c1b79
+    uses: pirlruc/commondevops/.github/workflows/common-doc-verify.yml@9350e95cbb130219be113d8737469cd7c39f155c # v6.11.0
     with:
       blocking: true
       run_link_lint: true
       run_markdownlint: true
       run_shfmt: true
-      scripts_ref: f7658926d6236a6af3fb44b2bc5bbfd2578c1b79
+      scripts_ref: 9350e95cbb130219be113d8737469cd7c39f155c # v6.11.0
 
   scaffold-verify:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     permissions:
       contents: read
       issues: read
-    uses: pirlruc/commondevops/.github/workflows/common-scaffold-verify.yml@f7658926d6236a6af3fb44b2bc5bbfd2578c1b79
+    uses: pirlruc/commondevops/.github/workflows/common-scaffold-verify.yml@9350e95cbb130219be113d8737469cd7c39f155c # v6.11.0
     with:
       blocking: true
-      scripts_ref: f7658926d6236a6af3fb44b2bc5bbfd2578c1b79
+      scripts_ref: 9350e95cbb130219be113d8737469cd7c39f155c # v6.11.0
     secrets:
       packs_token: ${{ secrets.GUARDRAILS_READ_TOKEN }}
 
@@ -57,11 +57,11 @@ jobs:
     permissions:
       contents: read
       packages: read
-    uses: pirlruc/commondevops/.github/workflows/common-secrets-sast.yml@f7658926d6236a6af3fb44b2bc5bbfd2578c1b79
+    uses: pirlruc/commondevops/.github/workflows/common-secrets-sast.yml@9350e95cbb130219be113d8737469cd7c39f155c # v6.11.0
     with:
       blocking: true
       semgrep_config: p/python
-      scripts_ref: f7658926d6236a6af3fb44b2bc5bbfd2578c1b79
+      scripts_ref: 9350e95cbb130219be113d8737469cd7c39f155c # v6.11.0
       container_image: ghcr.io/catthehacker/ubuntu:act-24.04@sha256:dff4ec57d90046a7283aafc314298380be82bfeccb9ad0f1b36c4ebe74aabe78
       mount_runner_git: false
 
@@ -72,28 +72,28 @@ jobs:
       actions: read
       packages: read
       security-events: write
-    uses: pirlruc/commondevops/.github/workflows/common-supply-chain.yml@f7658926d6236a6af3fb44b2bc5bbfd2578c1b79
+    uses: pirlruc/commondevops/.github/workflows/common-supply-chain.yml@9350e95cbb130219be113d8737469cd7c39f155c # v6.11.0
     with:
       blocking: true
-      scripts_ref: f7658926d6236a6af3fb44b2bc5bbfd2578c1b79
+      scripts_ref: 9350e95cbb130219be113d8737469cd7c39f155c # v6.11.0
       container_image: ghcr.io/catthehacker/ubuntu:act-24.04@sha256:dff4ec57d90046a7283aafc314298380be82bfeccb9ad0f1b36c4ebe74aabe78
       mount_runner_git: false
 
   pins:
     permissions:
       contents: read
-    uses: pirlruc/commondevops/.github/workflows/common-pins-verify.yml@f7658926d6236a6af3fb44b2bc5bbfd2578c1b79
+    uses: pirlruc/commondevops/.github/workflows/common-pins-verify.yml@9350e95cbb130219be113d8737469cd7c39f155c # v6.11.0
     with:
       pin_script: scripts/check-submodule-pins.sh
-      scripts_ref: f7658926d6236a6af3fb44b2bc5bbfd2578c1b79
+      scripts_ref: 9350e95cbb130219be113d8737469cd7c39f155c # v6.11.0
 
   token-audit:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     permissions:
       contents: read
-    uses: pirlruc/commondevops/.github/workflows/common-token-audit.yml@f7658926d6236a6af3fb44b2bc5bbfd2578c1b79
+    uses: pirlruc/commondevops/.github/workflows/common-token-audit.yml@9350e95cbb130219be113d8737469cd7c39f155c # v6.11.0
     with:
-      scripts_ref: f7658926d6236a6af3fb44b2bc5bbfd2578c1b79
+      scripts_ref: 9350e95cbb130219be113d8737469cd7c39f155c # v6.11.0
     secrets:
       # Dependabot runs cannot read Actions secrets. The Dependabot secret
       # covers the same private pins and is what the expiry audit can see.
@@ -108,7 +108,7 @@ jobs:
       actions: read
       id-token: write
       security-events: write
-    uses: pirlruc/commondevops/.github/workflows/common-scorecard.yml@f7658926d6236a6af3fb44b2bc5bbfd2578c1b79
+    uses: pirlruc/commondevops/.github/workflows/common-scorecard.yml@9350e95cbb130219be113d8737469cd7c39f155c # v6.11.0
     with:
       blocking: true
       publish_results: true
@@ -118,20 +118,20 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
-    uses: pirlruc/commondevops/.github/workflows/common-dependency-review.yml@f7658926d6236a6af3fb44b2bc5bbfd2578c1b79
+    uses: pirlruc/commondevops/.github/workflows/common-dependency-review.yml@9350e95cbb130219be113d8737469cd7c39f155c # v6.11.0
 
   threshold-drift:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     permissions:
       contents: read
-    uses: pirlruc/commondevops/.github/workflows/common-threshold-drift.yml@f7658926d6236a6af3fb44b2bc5bbfd2578c1b79
+    uses: pirlruc/commondevops/.github/workflows/common-threshold-drift.yml@9350e95cbb130219be113d8737469cd7c39f155c # v6.11.0
     with:
       drift_script: scripts/check-threshold-drift.sh
-      scripts_ref: f7658926d6236a6af3fb44b2bc5bbfd2578c1b79
+      scripts_ref: 9350e95cbb130219be113d8737469cd7c39f155c # v6.11.0
     secrets:
       checkout_token: ${{ secrets.GUARDRAILS_READ_TOKEN }}
 
   sweep:
     permissions:
       actions: write
-    uses: pirlruc/commondevops/.github/workflows/artifact-sweep.yml@f7658926d6236a6af3fb44b2bc5bbfd2578c1b79
+    uses: pirlruc/commondevops/.github/workflows/artifact-sweep.yml@9350e95cbb130219be113d8737469cd7c39f155c # v6.11.0

@@ -1,0 +1,7 @@
+language: python
+fuzz_targets:
+  - fuzz_cache_segment
+sanitizers:
+  - address
+architectures:
+  - x86_64
