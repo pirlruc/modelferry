@@ -14,6 +14,8 @@ from model_fetcher.exceptions import (
 )
 
 _API_VERSION = "2022-11-28"
+_MAX_REDIRECTS = 5
+_REDIRECT_STATUSES = {301, 302, 303, 307, 308}
 
 
 def api_headers(config: FetcherConfig, *, download: bool = False) -> dict[str, str]:
@@ -36,6 +38,52 @@ def api_headers(config: FetcherConfig, *, download: bool = False) -> dict[str, s
     if config.token:
         headers["Authorization"] = f"Bearer {config.token}"
     return headers
+
+
+def _redirect_target(current: str, location: str | None) -> str:
+    """Resolve a redirect and refuse a non-HTTP scheme.
+
+    Args:
+        current: URL that returned the redirect.
+        location: Location header value.
+
+    Returns:
+        The absolute next URL.
+
+    Raises:
+        DownloadError: When Location is missing or not HTTP(S).
+    """
+    if not location:
+        raise DownloadError("GitHub redirect did not include a Location header")
+    target = str(httpx.URL(current).join(location.strip()))
+    if urlsplit(target).scheme not in {"http", "https"}:
+        raise DownloadError("Refusing a GitHub redirect that is not HTTP(S)")
+    return target
+
+
+def _headers_for_target(
+    config: FetcherConfig, headers: dict[str, str], target: str
+) -> dict[str, str]:
+    """Keep the bearer token on the API host only.
+
+    Args:
+        config: Resolved API host.
+        headers: Headers from the previous hop.
+        target: Next URL.
+
+    Returns:
+        Headers safe to send to ``target``.
+
+    Raises:
+        DownloadError: When a non-HTTPS redirect leaves the API host.
+    """
+    if urlsplit(target).scheme != "https" and not same_host(config, target):
+        raise DownloadError("Refusing a GitHub redirect that is not HTTPS")
+    if same_host(config, target):
+        return headers
+    return {
+        key: value for key, value in headers.items() if key.lower() != "authorization"
+    }
 
 
 def same_host(config: FetcherConfig, url: str) -> bool:
@@ -124,14 +172,56 @@ class GitHubHttp:
         """
         if not same_host(self._config, url):
             raise DownloadError("Refusing to send the GitHub token to another host")
-        with self._client.stream(
-            "GET",
-            url,
-            headers=api_headers(self._config, download=True),
-            follow_redirects=False,
-        ) as response:
-            self._raise_for_status(response, url)
-            yield from response.iter_bytes()
+        headers = api_headers(self._config, download=True)
+        current = url
+        for _hop in range(_MAX_REDIRECTS + 1):
+            response = self._open(current, headers)
+            if response.status_code not in _REDIRECT_STATUSES:
+                try:
+                    self._raise_for_status(response, current)
+                    yield from response.iter_bytes()
+                finally:
+                    response.close()
+                return
+            current, headers = self._follow(response, current, headers)
+        raise DownloadError("GitHub redirect limit exceeded")
+
+    def _open(self, url: str, headers: dict[str, str]) -> httpx.Response:
+        """Send one streamed GET.
+
+        Args:
+            url: Absolute URL.
+            headers: Headers for this hop.
+
+        Returns:
+            The streamed response. The caller closes it.
+        """
+        request = self._client.build_request("GET", url, headers=headers)
+        return self._client.send(request, stream=True, follow_redirects=False)
+
+    def _follow(
+        self,
+        response: httpx.Response,
+        current: str,
+        headers: dict[str, str],
+    ) -> tuple[str, dict[str, str]]:
+        """Resolve one redirect and drop the token when the host changes.
+
+        Args:
+            response: Redirect response.
+            current: URL that produced the redirect.
+            headers: Headers used for that hop.
+
+        Returns:
+            The next URL and the headers safe to send there.
+        """
+        location = response.headers.get("location")
+        try:
+            response.read()
+        finally:
+            response.close()
+        target = _redirect_target(current, location)
+        return target, _headers_for_target(self._config, headers, target)
 
     def _send(self, method: str, path: str, *, download: bool) -> httpx.Response:
         """Send one request and map the status to a library error.

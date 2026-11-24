@@ -7,6 +7,18 @@ All notable changes to this project will be documented in this file.
 Release notes are updated with [Commitizen](https://github.com/commitizen-tools/commitizen)
 (`cz bump`).
 
+## 0.3.0
+
+### Fixed
+
+- GitHub release downloads follow an HTTPS redirect and drop the token when the next host is not the API.
+- A token is sent to loopback HTTP only when `allow_local_http` is set. The HTTP client refuses TLS older than 1.2.
+
+### Changed
+
+- Reusable workflows pin commondevops v6.11.0 and pydevops 3.10.1. CodeQL and Dependabot metadata use those reusables.
+- Guardrails 1.17.1 and github-scaffold 1.14.3.
+
 ## 0.2.0
 
 ### Added

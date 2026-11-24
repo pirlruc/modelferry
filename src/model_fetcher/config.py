@@ -227,6 +227,7 @@ class FetcherConfig(BaseModel):
         not cap downloads.
         unleash_instance_id: GitLab Unleash instance id, when feature flags use it.
         unleash_app_name: Unleash app name, normally the GitLab environment name.
+        allow_local_http: When true, a token may be sent to a loopback HTTP origin.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -241,6 +242,7 @@ class FetcherConfig(BaseModel):
     allowed_project_ids: tuple[str, ...] = ()
     unleash_instance_id: str | None = None
     unleash_app_name: str = _DEFAULT_APP_NAME
+    allow_local_http: bool = False
 
     @field_validator("provider")
     @classmethod
@@ -346,10 +348,13 @@ class FetcherConfig(BaseModel):
             return self
 
         host = (urlsplit(self.base_url).hostname or "").lower()
-        if host in _LOOPBACK_HOSTS:
+        if host in _LOOPBACK_HOSTS and self.allow_local_http:
             return self
 
-        raise ValueError("base_url must use https:// when a token is set")
+        raise ValueError(
+            "base_url must use https:// when a token is set, "
+            "unless allow_local_http is set for a loopback origin"
+        )
 
     @field_validator("cache_dir")
     @classmethod
@@ -377,6 +382,7 @@ class FetcherConfig(BaseModel):
         allowed_project_ids: tuple[str, ...] = (),
         unleash_instance_id: str | None = None,
         unleash_app_name: str | None = None,
+        allow_local_http: bool | None = None,
     ) -> Self:
         """Build settings from arguments, then environment variables.
 
@@ -401,6 +407,8 @@ class FetcherConfig(BaseModel):
             allowed_project_ids: Extra projects a flag payload may download from.
             unleash_instance_id: Explicit Unleash instance id.
             unleash_app_name: Explicit Unleash application or environment name.
+            allow_local_http: When true, a token may be sent to loopback HTTP.
+                ``None`` reads ``MODEL_FETCHER_LOCAL``.
 
         Returns:
             Frozen configuration for providers and the cache.
@@ -420,6 +428,12 @@ class FetcherConfig(BaseModel):
             or _first_env("GITLAB_UNLEASH_APP_NAME", "UNLEASH_APP_NAME")
             or _DEFAULT_APP_NAME
         )
+        if allow_local_http is None:
+            allow_local_http = _first_env("MODEL_FETCHER_LOCAL") in {
+                "1",
+                "true",
+                "yes",
+            }
         return cls(
             provider=provider,
             base_url=resolved_url,
@@ -431,4 +445,5 @@ class FetcherConfig(BaseModel):
             allowed_project_ids=allowed_project_ids,
             unleash_instance_id=resolved_instance,
             unleash_app_name=resolved_app,
+            allow_local_http=allow_local_http,
         )

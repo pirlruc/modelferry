@@ -336,6 +336,44 @@ def test_flag_payload_errors(tmp_path: Path) -> None:
             fetcher.get_feature_flag("acme/models", "a/b")
 
 
+def test_asset_download_follows_https_redirect_without_the_token(
+    tmp_path: Path,
+) -> None:
+    """A 302 to the release CDN is followed, and the token stays on the API host."""
+    body = b"cdn-bytes"
+    digest = hashlib.sha256(body).hexdigest()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        host = request.url.host
+        if request.url.path.endswith("/releases/tags/1.0.0"):
+            return httpx.Response(200, json=_release("fraud.onnx", digest, len(body)))
+        if host == "api.github.com" and request.url.path.endswith("/releases/assets/7"):
+            assert request.headers["authorization"] == "Bearer secret"
+            return httpx.Response(
+                302,
+                headers={
+                    "location": "https://objects.githubusercontent.com/releases/fraud.onnx"
+                },
+            )
+        if host == "objects.githubusercontent.com":
+            assert "authorization" not in request.headers
+            return httpx.Response(200, content=body)
+        return httpx.Response(404)
+
+    transport = httpx.MockTransport(handler)
+    with ModelFetcher(
+        provider="github",
+        base_url="https://api.github.com",
+        token="secret",
+        cache_dir=tmp_path,
+        client=httpx.Client(transport=transport),
+    ) as fetcher:
+        path = fetcher.download_model(
+            "acme/models", "fraud", "1.0.0", file_name="fraud.onnx"
+        )
+    assert path.read_bytes() == body
+
+
 def test_explicit_none_max_bytes_is_uncapped() -> None:
     """Omitting max_bytes keeps the default, and None removes the cap."""
     default = ModelFetcher(token="secret")

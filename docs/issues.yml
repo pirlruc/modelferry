@@ -667,4 +667,30 @@ milestones:
             title: Close the cache and transport gaps
             verification:
               - uv run pytest
+      - id: MF-WAVE-006
+        status: done
+        title: Follow GitHub asset redirects and pin the current ops workflows
+        decision: >-
+          In the context of a GitHub release asset, facing a 302 to the
+          download host, we decided to follow HTTPS redirects and strip the
+          token off-host, to achieve a real download, accepting a hop limit.
+        overview:
+          problem: >-
+            Asset downloads treated a 302 as success and never read the CDN.
+            Loopback HTTP accepted a token without an explicit local flag.
+        goal: >-
+          Downloads follow redirects, TLS is at least 1.2, and a token reaches
+          loopback HTTP only when allow_local_http is set.
+        acceptance_criteria:
+          - A 302 to objects.githubusercontent.com is followed without the token
+          - allow_local_http is required for a loopback HTTP token
+        guardrail_refs:
+          - APP-TLS-001
+          - APP-PARSE-001
+        tasks:
+          - id: MF-WAVE-006-T1
+            status: done
+            title: Follow redirects and add the atheris target
+            verification:
+              - uv run pytest tests/test_github.py tests/test_config.py
 

@@ -65,11 +65,16 @@ def test_invalid_configuration_is_a_library_error() -> None:
     with pytest.raises(ModelFetcherError, match="https"):
         ModelFetcher(base_url="http://gitlab.example.com", token="test-token")
 
+    with pytest.raises(ModelFetcherError, match="allow_local_http"):
+        ModelFetcher(base_url="http://127.0.0.1:8080", token="test-token")
+
     loopback = FetcherConfig.from_environment(
         base_url="http://127.0.0.1:8080",
         token="test-token",
+        allow_local_http=True,
     )
     assert loopback.base_url == "http://127.0.0.1:8080"
+    assert loopback.allow_local_http is True
     assert loopback.max_bytes == 8 * 1024 * 1024 * 1024
     uncapped = FetcherConfig.from_environment(max_bytes=None)
     assert uncapped.max_bytes is None
