@@ -3,6 +3,8 @@
 These cases exist so statement and branch coverage stay at the org floors.
 """
 
+# pylint: disable=duplicate-code
+
 import hashlib
 from collections.abc import Iterator
 from pathlib import Path

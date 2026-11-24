@@ -1,5 +1,9 @@
 """Tests for the local artifact cache."""
 
+# The edge-path tests keep a copy of this helper so each file stays under
+# the complexity cap.
+# pylint: disable=duplicate-code
+
 import fcntl
 import hashlib
 import os
