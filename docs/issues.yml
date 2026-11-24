@@ -678,9 +678,8 @@ milestones:
           problem: >-
             Asset downloads treated a 302 as success and never read the CDN.
             Loopback HTTP accepted a token without an explicit local flag.
-        goal: >-
-          Downloads follow redirects, TLS is at least 1.2, and a token reaches
-          loopback HTTP only when allow_local_http is set.
+            Downloads now follow redirects, TLS is at least 1.2, and a token
+            reaches loopback HTTP only when allow_local_http is set.
         acceptance_criteria:
           - A 302 to objects.githubusercontent.com is followed without the token
           - allow_local_http is required for a loopback HTTP token
