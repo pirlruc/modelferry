@@ -374,6 +374,67 @@ def test_asset_download_follows_https_redirect_without_the_token(
     assert path.read_bytes() == body
 
 
+def test_asset_redirect_rejects_unsafe_targets(tmp_path: Path) -> None:
+    """A missing, non-HTTP, or off-host HTTP redirect does not download."""
+    digest = hashlib.sha256(b"x").hexdigest()
+
+    def refuse(location: str | None, match: str) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.url.path.endswith("/releases/tags/1.0.0"):
+                return httpx.Response(200, json=_release("fraud.onnx", digest, 1))
+            if request.url.path.endswith("/releases/assets/7"):
+                headers = {} if location is None else {"location": location}
+                return httpx.Response(302, headers=headers)
+            return httpx.Response(404)
+
+        with (
+            ModelFetcher(
+                provider="github",
+                base_url="https://api.github.com",
+                token="secret",
+                cache_dir=tmp_path,
+                client=httpx.Client(transport=httpx.MockTransport(handler)),
+            ) as fetcher,
+            pytest.raises(DownloadError, match=match),
+        ):
+            fetcher.download_model(
+                "acme/models", "fraud", "1.0.0", file_name="fraud.onnx"
+            )
+
+    refuse(None, "Location")
+    refuse("ftp://files.example/fraud.onnx", "not HTTP")
+    refuse("http://evil.example/fraud.onnx", "not HTTPS")
+
+
+def test_same_host_redirect_keeps_the_token(tmp_path: Path) -> None:
+    """A redirect that stays on the API host still sends the bearer token."""
+    body = b"same-host"
+    digest = hashlib.sha256(body).hexdigest()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/releases/tags/1.0.0"):
+            return httpx.Response(200, json=_release("fraud.onnx", digest, len(body)))
+        if request.url.query:
+            assert request.headers["authorization"] == "Bearer secret"
+            return httpx.Response(200, content=body)
+        return httpx.Response(
+            302,
+            headers={"location": "https://api.github.com/repos/acme/models/raw?ok=1"},
+        )
+
+    with ModelFetcher(
+        provider="github",
+        base_url="https://api.github.com",
+        token="secret",
+        cache_dir=tmp_path,
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    ) as fetcher:
+        path = fetcher.download_model(
+            "acme/models", "fraud", "1.0.0", file_name="fraud.onnx"
+        )
+    assert path.read_bytes() == body
+
+
 def test_explicit_none_max_bytes_is_uncapped() -> None:
     """Omitting max_bytes keeps the default, and None removes the cap."""
     default = ModelFetcher(token="secret")

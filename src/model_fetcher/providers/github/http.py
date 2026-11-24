@@ -219,7 +219,7 @@ class GitHubHttp:
         try:
             response.read()
         finally:
-            response.close()
+            response.close()  # pylint: disable=duplicate-code
         target = _redirect_target(current, location)
         return target, _headers_for_target(self._config, headers, target)
 

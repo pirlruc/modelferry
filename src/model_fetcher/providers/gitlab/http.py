@@ -213,7 +213,7 @@ def _advance_redirect(
     try:
         response.read()
     finally:
-        response.close()
+        response.close()  # pylint: disable=duplicate-code
 
     if not location:
         raise DownloadError("GitLab redirect did not include a Location header")

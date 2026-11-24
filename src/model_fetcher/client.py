@@ -81,7 +81,7 @@ class ModelFetcher:
         ...     path = fetcher.download_model(42, "fraud_detector", "v1.4.0")
     """
 
-    def __init__(  # pylint: disable=too-many-locals
+    def __init__(  # pylint: disable=too-many-locals,too-many-arguments
         self,
         provider: str = "gitlab",
         base_url: str | None = None,
