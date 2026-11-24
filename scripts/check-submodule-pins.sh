@@ -6,11 +6,11 @@ set -eu
 ROOT="$(git rev-parse --show-toplevel)"
 cd "${ROOT}"
 
-# Peeled commits for annotated tags guardrails 1.15.0 and github-scaffold 1.12.0.
-GR_TAG="1.15.0"
-GR_EXPECT="2d4bb70e95449f6922781716857adeb22badf676"
-SC_TAG="1.12.0"
-SC_EXPECT="9c443ea978851768f451b1df2020dd86dfb1a967"
+# Peeled commits for annotated tags guardrails 1.17.1 and github-scaffold 1.14.3.
+GR_TAG="1.17.1"
+GR_EXPECT="8508e93691aa3c4f769ecc215ddc83ecf26e70b2"
+SC_TAG="1.14.3"
+SC_EXPECT="1fca8a3b79c10d38d5b39747d2363070a07503da"
 
 gr="$(git rev-parse 'HEAD:docs/guardrails')"
 sc="$(git rev-parse 'HEAD:.github/scaffold')"
