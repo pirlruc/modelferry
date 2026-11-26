@@ -227,10 +227,8 @@ milestones:
           modules: [model_fetcher]
         acceptance_criteria:
           - GUARDRAILS_READ_TOKEN can read pirlruc/guardrails.
-          - The markdown link linter is the scaffold 1.7.0 snapshot under scripts/,
-            because that secret and COMMONDEVOPS_READ_TOKEN are denied on
-            pirlruc/github-scaffold.
-          - A push to main completes the quality, tests, and docs workflows.
+          - shared-ci.yml passes that token into the pin, drift, and token-audit jobs.
+          - A push to main completes python-quality and the shared-ci docs job.
         out_of_scope:
           - Copying the private repositories into this repo.
         tasks:
@@ -239,12 +237,11 @@ milestones:
             title: Add the Actions secret and rerun main CI
             instructions:
               files:
-                - .github/workflows/ci-quality.yml
-                - .github/workflows/ci-tests.yml
-                - .github/workflows/ci-docs.yml
+                - .github/workflows/python-quality.yml
+                - .github/workflows/shared-ci.yml
                 - scripts/checkout-private-submodules.sh
             verification:
-              - The quality, tests, and docs runs on main finish green.
+              - The python-quality and shared-ci docs runs on main finish green.
       - id: REL-001
         status: open
         title: Configure PyPI Trusted Publishing
@@ -692,4 +689,32 @@ milestones:
             title: Follow redirects and add the atheris target
             verification:
               - uv run pytest tests/test_github.py tests/test_config.py
+      - id: MF-WAVE-007
+        status: open
+        title: Close the GitLab redirect and digest gaps
+        decision: >-
+          In the context of a GitLab download, facing an off-host cleartext
+          redirect and a file with no digest, we decided one HTTPS redirect
+          rule and a required digest, to achieve the same fail-closed path
+          as GitHub, accepting that a generic package must send a checksum.
+        overview:
+          problem: >-
+            GitLab followed an off-host HTTP redirect. A missing digest was
+            stored. Digest compares were not constant time. An injected HTTP
+            client could skip the TLS 1.2 floor.
+          goal: >-
+            Those paths fail closed, and the security policy names disclosure.
+        acceptance_criteria:
+          - An off-host HTTP GitLab redirect raises DownloadError
+          - A download with no digest raises DownloadError
+          - An injected client with verification off is rejected
+        guardrail_refs:
+          - APP-TLS-001
+          - PY-SEC-005
+        tasks:
+          - id: MF-WAVE-007-T1
+            status: open
+            title: Share the redirect rule and require a digest
+            verification:
+              - uv run pytest
 

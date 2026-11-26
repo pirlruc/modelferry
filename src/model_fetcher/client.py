@@ -57,6 +57,32 @@ def register_provider(
 register_provider("github", GitHubRegistryProvider, GitHubFlagProvider)
 
 
+def _require_tls_floor(client: httpx.Client) -> None:
+    """Reject an injected client that can speak cleartext TLS or skip verification.
+
+    Args:
+        client: Caller-owned HTTP client.
+
+    Raises:
+        ModelFetcherError: When the client disables certificate checks or
+            allows TLS older than 1.2.
+    """
+    transport = client._transport  # pylint: disable=protected-access
+    if isinstance(transport, httpx.MockTransport):
+        return
+    pool = getattr(transport, "_pool", None)
+    context = getattr(pool, "_ssl_context", None)
+    if (
+        not isinstance(context, ssl.SSLContext)
+        or context.verify_mode == ssl.CERT_NONE
+        or context.minimum_version < ssl.TLSVersion.TLSv1_2
+    ):
+        raise ModelFetcherError(
+            "An injected HTTP client must verify certificates "
+            "and set TLS 1.2 as the minimum version"
+        )
+
+
 def _tls_context() -> ssl.SSLContext:
     """Return a context that refuses TLS older than 1.2.
 
@@ -111,7 +137,8 @@ class ModelFetcher:
             unleash_app_name: Unleash app name, usually the environment.
             allow_local_http: When true, a token may be sent to loopback HTTP.
             client: Optional HTTP client. When omitted, the fetcher owns a client
-                and closes it.
+                and closes it. An injected client must verify certificates and
+                refuse TLS older than 1.2. A mock transport is accepted.
 
         Raises:
             ProviderNotSupportedError: If ``provider`` was not registered.
@@ -145,11 +172,15 @@ class ModelFetcher:
         registry_cls, flag_cls = pair
         self._owns_client = client is None
         # GitLabHttp follows redirects itself and strips tokens on cross-origin hops.
-        self._client = client or httpx.Client(
-            timeout=httpx.Timeout(timeout),
-            follow_redirects=False,
-            verify=_tls_context(),
-        )
+        if client is None:
+            self._client = httpx.Client(
+                timeout=httpx.Timeout(timeout),
+                follow_redirects=False,
+                verify=_tls_context(),
+            )
+        else:
+            _require_tls_floor(client)
+            self._client = client
         self.cache = CacheManager(self.config.cache_dir)
         self.registry = registry_cls(self.config, self.cache, self._client)
         self.flags = flag_cls(self.config, self._client)

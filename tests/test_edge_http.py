@@ -108,6 +108,7 @@ def test_pagination_limits_and_generic_fallback(tmp_path: Path) -> None:
         "GET",
         "/api/v4/projects/42/packages/generic/fraud/v1/model.onnx",
         content=_PAYLOAD,
+        headers={"x-checksum-sha256": _DIGEST},
     )
     client, fetcher = _fetcher(fallback, tmp_path / "fallback")
     with client, fetcher:

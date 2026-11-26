@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import fcntl
 import hashlib
+import hmac
 import os
 import time
 import uuid
@@ -128,6 +129,8 @@ class CacheManager:
             version: Artifact version.
             file_name: Single file name, without directories.
             target_dir: When set, place the file directly in this directory.
+                The caller must keep this path inside a directory it trusts.
+                This method does not confine ``target_dir`` to the cache root.
 
         Returns:
             Destination path for the artifact.
@@ -355,7 +358,7 @@ def _assert_complete(
             f"expected {expected_size}",
         )
 
-    if expected_sha256 is not None and file_hash != expected_sha256:
+    if expected_sha256 is not None and not _digests_match(file_hash, expected_sha256):
         raise DownloadError(
             f"SHA-256 mismatch for {name}: expected {expected_sha256}, "
             f"computed {file_hash}",
@@ -439,9 +442,24 @@ def _reject_declared_size(
     )
 
 
+def _digests_match(left: str, right: str) -> bool:
+    """Compare two digests without a short-circuit on the first byte.
+
+    Args:
+        left: Hex digest.
+        right: Hex digest.
+
+    Returns:
+        True when both strings are equal.
+    """
+    return len(left) == len(right) and hmac.compare_digest(left, right)
+
+
 @contextmanager
 def _file_lock(path: Path, mode: int) -> Iterator[None]:
-    """Hold an advisory lock until the block exits.
+    """Hold a Unix ``fcntl`` advisory lock until the block exits.
+
+    Other platforms are unsupported. The lock is not reliable on NFS.
 
     Args:
         path: Lock file created beside the artifact.
@@ -548,7 +566,7 @@ def _sidecar_can_be_trusted(
     Returns:
         True when the sidecar equals the expected digest and is newer than the file.
     """
-    if recorded is None or expected is None or recorded != expected:
+    if recorded is None or expected is None or not _digests_match(recorded, expected):
         return False
 
     return _sidecar_is_newer(path)
@@ -581,10 +599,10 @@ def _digest_ok(actual: str, recorded: str | None, expected: str | None) -> bool:
     Returns:
         True when both constraints that exist are satisfied.
     """
-    if recorded is not None and recorded != actual:
+    if recorded is not None and not _digests_match(recorded, actual):
         return False
 
     if expected is None and recorded is None:
         return False
 
-    return expected is None or actual == expected
+    return expected is None or _digests_match(actual, expected)
