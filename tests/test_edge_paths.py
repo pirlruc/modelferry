@@ -177,7 +177,13 @@ def test_registry_list_package_and_transport_edges(tmp_path: Path) -> None:
         json_body=[{"id": 7, "version": "v1", "artifacts": [{"name": "model.onnx"}]}],
     )
     mock.add(
-        "GET", _FILE, content=_PAYLOAD, headers={"content-length": str(len(_PAYLOAD))}
+        "GET",
+        _FILE,
+        content=_PAYLOAD,
+        headers={
+            "content-length": str(len(_PAYLOAD)),
+            "x-checksum-sha256": _DIGEST,
+        },
     )
     client, fetcher = _fetcher(mock, tmp_path)
     with client, fetcher:
@@ -246,7 +252,12 @@ def test_target_directory_skips_the_cache_tree(tmp_path: Path) -> None:
     """target_dir places the file directly and ignores a non-numeric content length."""
     mock = GitLabMock()
     mock.add("GET", _VERSION, json_body={"id": 7, "version": "v1"})
-    mock.add("GET", _FILE, content=_PAYLOAD, headers={"content-length": "nope"})
+    mock.add(
+        "GET",
+        _FILE,
+        content=_PAYLOAD,
+        headers={"content-length": "nope", "x-checksum-sha256": _DIGEST},
+    )
     client, fetcher = _fetcher(mock, tmp_path)
     target = tmp_path / "out"
     with client, fetcher:

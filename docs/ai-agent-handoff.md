@@ -31,7 +31,7 @@ Issue methodology:
 | Live GitHub epic issues                          | Sibling epics opened with `CURSOR_UPDATE_ISSUE_TOKEN`. They still need a `docs/issues.yml` sync in those repos. |
 | `docs/guardrails`                                | Gitlink tag 1.17.1 (`8508e936`)                    |
 | `.github/scaffold`                               | Gitlink tag 1.14.3 (`1fca8a3b`)                    |
-| commondevops callers                             | `uses:` v6.11.0 peeled `9350e95c`. Public repo, no read token on the job. |
+| commondevops callers                             | `uses:` v6.12.0 peeled `ff65e7ef`. Public repo, no read token on the job. |
 | pydevops caller                                  | `python-quality` and `python-release` at 3.10.1 (`1ebe4473`). |
 | Release                                          | [0.3.0](https://github.com/pirlruc/modelferry/releases/tag/0.3.0). The wheel verifies with `--signer-repo pirlruc/pydevops`. Tags `0.1.0` and `0.2.0` stay. REL-001, OPS-001, and REL-002 stay open. |
 | Actions secrets                                  | `GUARDRAILS_READ_TOKEN`, `COMMONDEVOPS_READ_TOKEN`, `PYDEVOPS_READ_TOKEN` |

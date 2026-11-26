@@ -10,9 +10,9 @@ import httpx
 
 from model_fetcher.config import FetcherConfig
 from model_fetcher.exceptions import AuthenticationError, DownloadError
+from model_fetcher.http_redirect import MAX_REDIRECTS, require_https_off_host
 
 _MAX_PAGES = 20
-_MAX_REDIRECTS = 20
 _MAX_ATTEMPTS = 3
 _RETRY_STATUSES = frozenset({500, 502, 503, 504})
 _BACKOFF_SECONDS = (0.05, 0.1)
@@ -154,7 +154,7 @@ def _follow_redirects(
     current = url
     current_headers = dict(headers)
     current_params = params
-    for _hop in range(_MAX_REDIRECTS):
+    for _hop in range(MAX_REDIRECTS):
         response = _transmit(
             client, current, current_headers, current_params, stream=stream
         )
@@ -219,6 +219,12 @@ def _advance_redirect(
         raise DownloadError("GitLab redirect did not include a Location header")
 
     target = _redirect_target(current, location)
+    require_https_off_host(
+        current.host or "",
+        target.scheme,
+        target.host or "",
+        "GitLab",
+    )
     if _retains_credentials(current, target):
         return target, headers
 

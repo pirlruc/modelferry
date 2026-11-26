@@ -7,6 +7,20 @@ All notable changes to this project will be documented in this file.
 Release notes are updated with [Commitizen](https://github.com/commitizen-tools/commitizen)
 (`cz bump`).
 
+## 0.4.0
+
+### Fixed
+
+- A GitLab redirect that leaves the API host must be HTTPS. GitHub uses the same rule.
+- A GitLab download without a registry or origin SHA-256 digest is refused.
+- Digest checks use a constant-time compare.
+- An injected HTTP client must verify certificates and refuse TLS older than 1.2.
+
+### Changed
+
+- Reusable workflows pin commondevops v6.12.0.
+- The security policy names a private disclosure path and a 7 day acknowledgement.
+
 ## 0.3.0
 
 ### Fixed

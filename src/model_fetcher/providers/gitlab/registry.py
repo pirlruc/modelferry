@@ -458,6 +458,10 @@ class GitLabRegistryProvider(BaseRegistryProvider):
             expected_size = _content_length(response)
             header_sha = _checksum_header(response, self._config.base_url)
             digest = expected_sha256 or header_sha
+            if digest is None:
+                raise DownloadError(
+                    f"GitLab did not provide a SHA-256 digest for {file_name}"
+                )
             return self._cache.write_atomic(
                 destination,
                 _iter_bytes(response),

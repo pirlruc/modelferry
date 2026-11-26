@@ -1,7 +1,10 @@
 """Tests for environment and constructor configuration."""
 
+import ssl
+import warnings
 from pathlib import Path
 
+import httpx
 import pytest
 
 from model_fetcher.client import ModelFetcher
@@ -78,3 +81,22 @@ def test_invalid_configuration_is_a_library_error() -> None:
     assert loopback.max_bytes == 8 * 1024 * 1024 * 1024
     uncapped = FetcherConfig.from_environment(max_bytes=None)
     assert uncapped.max_bytes is None
+
+
+def test_injected_client_must_verify_and_use_tls_1_2() -> None:
+    """A caller-owned client cannot disable verification or drop below TLS 1.2."""
+    weak = ssl.create_default_context()
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        weak.minimum_version = ssl.TLSVersion.TLSv1
+    with (
+        httpx.Client(verify=weak) as client,
+        pytest.raises(ModelFetcherError, match="TLS 1.2"),
+    ):
+        ModelFetcher(client=client)
+
+    with (
+        httpx.Client(verify=False) as client,
+        pytest.raises(ModelFetcherError, match="TLS 1.2"),
+    ):
+        ModelFetcher(client=client)

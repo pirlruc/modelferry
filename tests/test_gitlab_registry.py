@@ -78,7 +78,12 @@ def test_generic_package_fallback_and_project_path(tmp_path: Path) -> None:
     """A missing model version falls back to the generic package registry."""
     mock = GitLabMock()
     encoded = "/api/v4/projects/group%2Fapp/packages/generic/fraud/v1/model.onnx"
-    mock.add("GET", encoded, content=_PAYLOAD)
+    mock.add(
+        "GET",
+        encoded,
+        content=_PAYLOAD,
+        headers={"x-checksum-sha256": _DIGEST},
+    )
     client, fetcher = _fetcher(mock, tmp_path)
     with client, fetcher:
         path = fetcher.download_model(
@@ -100,7 +105,7 @@ def test_version_lookup_by_name_then_download(tmp_path: Path) -> None:
         "/api/v4/projects/42/ml/models/3/versions",
         json_body=[{"id": 7, "version": "v1"}],
     )
-    mock.add("GET", _FILE, content=_PAYLOAD)
+    mock.add("GET", _FILE, content=_PAYLOAD, headers={"x-checksum-sha256": _DIGEST})
     client, fetcher = _fetcher(mock, tmp_path)
     with client, fetcher:
         path = fetcher.download_model(42, "fraud", "v1", file_name="model.onnx")
@@ -197,7 +202,11 @@ def test_cross_origin_redirect_drops_credentials_and_checksum(tmp_path: Path) ->
     mock.add(
         "GET",
         _VERSION,
-        json_body={"id": 7, "version": "v1", "files": [{"file_name": "model.onnx"}]},
+        json_body={
+            "id": 7,
+            "version": "v1",
+            "files": [{"file_name": "model.onnx", "file_sha256": _DIGEST}],
+        },
     )
     mock.add(
         "GET",
@@ -262,6 +271,35 @@ def test_same_origin_and_https_upgrade_keep_credentials(tmp_path: Path) -> None:
         fetcher.download_model(42, "fraud", "v1", file_name="model.onnx")
 
     assert upgraded.header(2, "private-token") == "test-token"
+
+
+def test_refuses_cleartext_redirect_off_host(tmp_path: Path) -> None:
+    """An off-host HTTP Location is refused after the token is irrelevant."""
+    mock = GitLabMock()
+    mock.add("GET", _VERSION, json_body=_version_document())
+    mock.add(
+        "GET",
+        _FILE,
+        status=302,
+        headers={"location": "http://cdn.example/model.onnx"},
+    )
+    client, fetcher = _fetcher(mock, tmp_path)
+    with client, fetcher, pytest.raises(DownloadError, match="not HTTPS"):
+        fetcher.download_model(42, "fraud", "v1", file_name="model.onnx")
+
+
+def test_refuses_a_download_without_a_digest(tmp_path: Path) -> None:
+    """A file with no registry digest and no origin checksum is not stored."""
+    mock = GitLabMock()
+    mock.add(
+        "GET",
+        _VERSION,
+        json_body={"id": 7, "version": "v1", "files": [{"file_name": "model.onnx"}]},
+    )
+    mock.add("GET", _FILE, content=_PAYLOAD)
+    client, fetcher = _fetcher(mock, tmp_path)
+    with client, fetcher, pytest.raises(DownloadError, match="SHA-256"):
+        fetcher.download_model(42, "fraud", "v1", file_name="model.onnx")
 
 
 def test_refuses_unsafe_or_endless_redirects(tmp_path: Path) -> None:
@@ -345,7 +383,7 @@ def test_model_list_stops_when_the_name_is_found(tmp_path: Path) -> None:
         "/api/v4/projects/42/ml/models/3/versions",
         json_body=[{"id": 7, "version": "v1"}],
     )
-    mock.add("GET", _FILE, content=_PAYLOAD)
+    mock.add("GET", _FILE, content=_PAYLOAD, headers={"x-checksum-sha256": _DIGEST})
     client, fetcher = _fetcher(mock, tmp_path)
     with client, fetcher:
         saved = fetcher.download_model(42, "fraud", "v1", file_name="model.onnx")
