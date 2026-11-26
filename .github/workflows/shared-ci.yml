@@ -50,7 +50,7 @@ jobs:
       blocking: true
       scripts_ref: ff65e7efbb7eea67bd659f886db0adb399f3a3f5 # v6.12.0
     secrets:
-      packs_token: ${{ secrets.GUARDRAILS_READ_TOKEN }}
+      packs_token: ${{ github.event.pull_request.user.login == 'dependabot[bot]' && secrets.DEPENDABOT_GITHUB_TOKEN || secrets.GUARDRAILS_READ_TOKEN }}
 
   secrets-sast:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
@@ -129,7 +129,7 @@ jobs:
       drift_script: scripts/check-threshold-drift.sh
       scripts_ref: ff65e7efbb7eea67bd659f886db0adb399f3a3f5 # v6.12.0
     secrets:
-      checkout_token: ${{ secrets.GUARDRAILS_READ_TOKEN }}
+      checkout_token: ${{ github.event.pull_request.user.login == 'dependabot[bot]' && secrets.DEPENDABOT_GITHUB_TOKEN || secrets.GUARDRAILS_READ_TOKEN }}
 
   sweep:
     permissions:
